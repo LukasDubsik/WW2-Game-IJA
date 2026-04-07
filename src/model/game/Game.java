@@ -1,4 +1,4 @@
-package game;
+package model.game;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,9 +11,10 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
-import common.GameEvent;
-import common.Position;
-import tool.GameObserver;
+import model.map.Position;
+import model.map.Terrain;
+import model.unit.Unit;
+import model.unit.UnitType;
 
 /**
  * @class Game

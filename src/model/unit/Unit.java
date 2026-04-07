@@ -1,6 +1,6 @@
-package game;
+package model.unit;
 
-import common.Position;
+import model.map.Position;
 
 public class Unit {
 

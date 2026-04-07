@@ -1,4 +1,6 @@
-package game;
+package model.unit;
+
+import model.map.Terrain;
 
 public enum UnitType {
     // List of the types and their names and values of the UnitType

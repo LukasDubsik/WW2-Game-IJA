@@ -1,4 +1,4 @@
-package common;
+package model.map;
 
 /**
  * @brief Immutable board position addressed as [row, column].

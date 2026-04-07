@@ -1,6 +1,4 @@
-package tool;
-
-import common.GameEvent;
+package model.game;
 
 /**
  * @interface GameObserver

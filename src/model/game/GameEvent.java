@@ -1,4 +1,4 @@
-package common;
+package model.game;
 
 public class GameEvent {
     
