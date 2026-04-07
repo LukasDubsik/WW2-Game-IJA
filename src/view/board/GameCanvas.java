@@ -11,7 +11,7 @@ import model.map.Position;
 import model.map.Terrain;
 import model.unit.Unit;
 
-public class GameCanvas extends Canvas {
+public final class GameCanvas extends Canvas {
     
     // Holders for the internal values
     private Game game; ///< The whole game keeping the internal state
@@ -145,6 +145,27 @@ public class GameCanvas extends Canvas {
 
         // Return all the positions of the hexagon y
         return new double[] {y - half, y - quarter, y + quarter, y + half, y + quarter, y - quarter};
+    }
+
+    /**
+     * @brief Temporary color for testing the map generation
+     * 
+     * @param terrain The terrain type
+     * 
+     * @return The color for the terrain type
+     */
+    private Color terrainColor(Terrain terrain) {
+        String name = terrain.name();
+
+        if (name.contains("P")) return Color.BEIGE;
+        if (name.contains("F")) return Color.DARKSEAGREEN;
+        if (name.contains("M")) return Color.LIGHTGRAY;
+        if (name.contains("W")) return Color.LIGHTSKYBLUE;
+        if (name.contains("C")) return Color.KHAKI;
+        if (name.contains("F")) return Color.LIGHTCORAL;
+        if (name.contains("H")) return Color.PLUM;
+
+        return Color.WHITE;
     }
 
 }
