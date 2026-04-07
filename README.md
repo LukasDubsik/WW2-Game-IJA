@@ -1,2 +1,2 @@
-# WW2-Game-IJA
-A simple ww2 agme made fully in Java made for my IJA university coursework
+# IJA-hw2-xdubsil00
+Github repository for keeping my progress of IJA2 homework

@@ -1,0 +1,48 @@
+2026-04-06 Lukas Dubsik: fix(game): Last fixes.
+2026-04-06 Lukas Dubsik: fix(game): Some minor fixes to finish the code.
+2026-04-06 Lukas Dubsik: feature(game): Added the ability to create Game from a file.
+2026-04-06 Lukas Dubsik: fix(game): made it possible to pass through friendly unit tiles, as per game rules
+2026-04-06 Lukas Dubsik: fix(game): Made same tile movement possible
+2026-04-06 Lukas Dubsik: robustness(game): Made the unit creation more robust and defensible.
+2026-04-06 Lukas Dubsik: fix(game): Not enough checks for movement -> was missing if unit there and if even reachable by it
+2026-04-06 Lukas Dubsik: fix(game): Incorrectly used vehicle movement for infantry and viceversa
+2026-04-06 Lukas Dubsik: refactor(game): Made the Unit/terrain movement better
+2026-04-06 Lukas Dubsik: fix(game): Frontier was expanded by first psoition, not by the current one
+2026-04-06 Lukas Dubsik: fix(game): Was using first instead of current psoition in path finding -> leading to only explanding in the first ring
+2026-04-06 Lukas Dubsik: fix(game): Observers are being notified
+2026-04-06 Lukas Dubsik: fix(game): Incorrect comparison in terrain call for conversion
+2026-04-06 Lukas Dubsik: feature(game): Observer removal and call for the Game class
+2026-04-06 Lukas Dubsik: feature(game): Observer adding for Game class
+2026-04-06 Lukas Dubsik: fix(game): Made the correct reference to Unit movement types.
+2026-04-06 Lukas Dubsik: feature(game): Function to set the new unit's position
+2026-04-06 Lukas Dubsik: feature(game): Function to move the unit on the map
+2026-04-06 Lukas Dubsik: feature(game): Added getting movement type based on unit type.
+2026-04-06 Lukas Dubsik: feature(game): Function to get terrain at some position.
+2026-04-06 Lukas Dubsik: feature(game): Added function and some other values to check if position is inside the map.
+2026-04-06 Lukas Dubsik: feature(game): Hoperfully working version of the pathfinding.
+2026-04-06 Lukas Dubsik: feature(game): Some additional classes I think are necessary for pathfinding algorithm
+2026-04-06 Lukas Dubsik: feature(game): Very start of pathfinding algorithm.
+2026-04-05 Lukas Dubsik: feature(game): Added getting Unit's values from the Unit.
+2026-04-05 Lukas Dubsik: feature(common): Added String conversion for Position as expected by the instructions.
+2026-04-05 Lukas Dubsik: feature(game): Added String conversion for Unit.
+2026-04-05 Lukas Dubsik: feature(game): Added functions to UniType to acquire their values.
+2026-04-05 Lukas Dubsik: feature(game): Added constructor for Unit class.
+2026-04-05 Lukas Dubsik: feature(game): Added MovementType enum for types of movements.
+2026-04-05 Lukas Dubsik: feature(game): Added UnitType enum for the unit types.
+2026-04-05 Lukas Dubsik: feature(game): Expanded Terrain to the types mentioned in the terrain.csv.
+2026-04-05 Lukas Dubsik: feature(game): Adding unit to the game.
+2026-04-05 Lukas Dubsik: test(global): Added some additional things for testing.
+2026-04-05 Lukas Dubsik: feature(game): Base initialization of the Game class.
+2026-04-05 Lukas Dubsik: feature(tool): Implementation for the GameObserver interface.
+2026-04-05 Lukas Dubsik: comment(game): Added missing comments to teh Terrain enum - 2.
+2026-04-05 Lukas Dubsik: comment(game): Added missing comments to teh Terrain enum.
+2026-04-05 Lukas Dubsik: comment(game): Added missing comments to teh GameFactory class.
+2026-04-05 Lukas Dubsik: fix(game): Incorrect call for the Terrain array.
+2026-04-05 Lukas Dubsik: feature(game): Implementation for the Terrain enum.
+2026-04-05 Lukas Dubsik: feature(game): Init for the Terrain enum
+2026-04-05 Lukas Dubsik: feature(game): Added creation of Game from the map (in the string form).
+2026-04-05 Lukas Dubsik: feature(game): Added base form to the GameFactory class.
+2026-04-05 Lukas Dubsik: feature(common): Added basic class for Position in the form of record.
+2026-04-05 Lukas Dubsik: test(global): Added testing and running sets per project instructions.
+2026-04-05 Lukas Dubsik: feature(global): Added initial files for necessary classes per the testing set.
+2026-04-05 Kuke: Initial commit
