@@ -23,13 +23,13 @@ import model.unit.UnitType;
 public class Game {
 
     // The values held by the class
-    private Terrain[][] map; ///< The map of the game
-    private Map<Position, Unit> units_map = new HashMap<>(); ///< Position to unit
+    private final Terrain[][] map; ///< The map of the game
+    private final Map<Position, Unit> units_map = new HashMap<>(); ///< Position to unit
 
-    private int rows; ///< Number of rows of the map
-    private int columns; ///< Number of ciolumns of the map
+    private final int rows; ///< Number of rows of the map
+    private final int columns; ///< Number of ciolumns of the map
 
-    private List<GameObserver> observers = new ArrayList<>();
+    private final List<GameObserver> observers = new ArrayList<>();
     
     /**
      * @brief The constructor of the Game class
@@ -42,6 +42,24 @@ public class Game {
         // Acquire some values for easier future analysis
         this.rows = map.length;
         this.columns = map[0].length;
+    }
+
+    /**
+     * @brief Get the number of columns in the game
+     * 
+     * @return The number of the columns.
+     */
+    public int getColumns() {
+        return this.columns;
+    }
+
+    /**
+     * @brief Get the number of rows in the game
+     * 
+     * @return The number of the rows.
+     */
+    public int getRows() {
+        return this.rows;
     }
 
     /**
