@@ -117,4 +117,34 @@ public class GameCanvas extends Canvas {
     private double getHexY(int row) {
         return row*tile_size_y*0.75 + tile_size_y/2.0 + 5;
     }
+
+    /**
+     * @brief Get the positions of the hexagon points X
+     * 
+     * @param x The center of the hexagon x
+     * 
+     * @return The x positions of the hexagon
+     */
+    private double[] getPointsX(double x) {
+        double quarter = tile_size_x/4.0;
+
+        // Return all the positions of the hexagon x
+        return new double[] {x, x + quarter, x + quarter, x, x - quarter, x - quarter};
+    }
+
+    /**
+     * @brief Get the positions of the hexagon points Y
+     * 
+     * @param y The center of the hexagon y
+     * 
+     * @return The y positions of the hexagon
+     */
+    private double[] getPointsY(double y) {
+        double half = tile_size_y/2.0;
+        double quarter = tile_size_y/4.0;
+
+        // Return all the positions of the hexagon y
+        return new double[] {y - half, y - quarter, y + quarter, y + half, y + quarter, y - quarter};
+    }
+
 }
