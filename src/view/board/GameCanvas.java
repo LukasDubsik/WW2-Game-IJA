@@ -1,5 +1,6 @@
 package view.board;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.scene.canvas.Canvas;
@@ -14,9 +15,9 @@ import model.unit.Unit;
 public final class GameCanvas extends Canvas {
     
     // Holders for the internal values
-    private Game game; ///< The whole game keeping the internal state
-    private double tile_size_x; ///< The size of the tile x -> will be hexagons
-    private double tile_size_y; ///< the size of the tile y
+    private final Game game; ///< The whole game keeping the internal state
+    private final double tile_size_x; ///< The size of the tile x -> will be hexagons
+    private final double tile_size_y; ///< the size of the tile y
 
     private Consumer<Position> tileClickHandler = position -> {}; ///< The handler for the mouse click
 
@@ -25,7 +26,7 @@ public final class GameCanvas extends Canvas {
      */
     public GameCanvas(Game game_, double tile_size_x_, double tile_size_y_) {
         // Call the parent constructor and define the final size
-        super(game_.getColumns() * tile_size_x_, game_.getRows() * tile_size_y_);
+        super(canvasWidth(game_.getColumns(), tile_size_x_), canvasHeight(game_.getRows(), tile_size_y_));
 
         this.game = game_;
         this.tile_size_x = tile_size_x_;
@@ -33,19 +34,18 @@ public final class GameCanvas extends Canvas {
 
         // Set up the evnt for mouse click
         setOnMouseClicked(event -> {
-            // Get the true x/y position within the map
-            int column = (int)(event.getX()/tile_size_x);
-            int row = (int)(event.getY()/tile_size_y);
-
-            // If we clicked within the map
-            if (row >= 0 && row < game.getRows() && column >= 0 && column < game.getColumns()) {
-                // Activate the handler for the click
-                tileClickHandler.accept(new Position(row, column));
+            Position clicked = findHexAt(event.getX(), event.getY());
+            if (clicked != null) {
+                tileClickHandler.accept(clicked);
             }
         });
 
         // Draw the current game
         draw();
+    }
+
+    public void setOnTileClicked(Consumer<Position> handler) {
+        this.tileClickHandler = handler != null ? handler : position -> {};
     }
 
     public void draw() {
@@ -92,6 +92,62 @@ public final class GameCanvas extends Canvas {
         }
     }
 
+    /**
+     * @brief Find the hexagon at this position
+     * 
+     * @param mouseX The position x whgere mouse clicked
+     * @param mouseY The position y where mouse clicked
+     * 
+     * @return The Position within the game map
+     */
+    private Position findHexAt(double mouseX, double mouseY) {
+        // Iterate through the map
+        for (int row = 0; row < game.getRows(); row++) {
+            for (int column = 0; column < game.getColumns(); column++) {
+                // Acquire the hexagon residing at that point in the map
+                double centerX = getHexX(row, column);
+                double centerY = getHexY(row);
+
+                double[] xPoints = getPointsX(centerX);
+                double[] yPoints = getPointsY(centerY);
+
+                // Determine if the clicked point lies in that hexagon
+                if (pointInPolygon(mouseX, mouseY, xPoints, yPoints)) {
+                    return new Position(row, column);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @brief Determine if the point is inside the polygon points
+     * 
+     * @param px The point we are searching for -> x coordinate
+     * @param py The point we are searching for -> y coordinate
+     * @param xPoints The points of the polygon -> x positions
+     * @param yPoints The points of the polygon -> y positions
+     * 
+     * @return If the point is inside the polygon
+     */
+    private boolean pointInPolygon(double px, double py, double[] xPoints, double[] yPoints) {
+        boolean inside = false;
+        int n = xPoints.length;
+
+        // For every point of the polygon
+        for (int i = 0, j = n - 1; i < n; j = i++) {
+            // Does it intersect?
+            boolean intersects = ((yPoints[i] > py) != (yPoints[j] > py)) && (px < (xPoints[j] - xPoints[i]) * (py - yPoints[i])/(yPoints[j] - yPoints[i]) + xPoints[i]);
+
+            // If so, change the lie inside status
+            if (intersects) {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
     // Function for hex computation
 
     /**
@@ -126,10 +182,10 @@ public final class GameCanvas extends Canvas {
      * @return The x positions of the hexagon
      */
     private double[] getPointsX(double x) {
-        double quarter = tile_size_x/4.0;
+        double half = tile_size_x/2.0;
 
         // Return all the positions of the hexagon x
-        return new double[] {x, x + quarter, x + quarter, x, x - quarter, x - quarter};
+        return new double[] {x, x + half, x + half, x, x - half, x - half};
     }
 
     /**
@@ -145,6 +201,30 @@ public final class GameCanvas extends Canvas {
 
         // Return all the positions of the hexagon y
         return new double[] {y - half, y - quarter, y + quarter, y + half, y + quarter, y - quarter};
+    }
+
+    /**
+     * @brief Determine the x size of the canvas
+     * 
+     * @param columns The number of columns of the canvas
+     * @param tile_x Size of one tile in the x direction
+     * 
+     * @return The width of the canvas
+     */
+    private static double canvasWidth(int columns, double tile_x) {
+        return columns*tile_x + tile_x/2.0 + 10;
+    }
+
+    /**
+     * @brief Determine the y size of the canvas
+     * 
+     * @param rows The number of rows of the canvas
+     * @param tile_y Size of one tile in the y direction
+     * 
+     * @return The height of the canvas
+     */
+    private static double canvasHeight(int rows, double tile_y) {
+        return (rows - 1)*(tile_y*0.75) + tile_y + 10;
     }
 
     /**
@@ -166,6 +246,31 @@ public final class GameCanvas extends Canvas {
         if (name.contains("H")) return Color.PLUM;
 
         return Color.WHITE;
+    } 
+
+    /**
+     * @brief Temporary class for owner unit color
+     * @param owner
+     * @return
+     */
+    private Color ownerColor(String owner) {
+        if (Objects.equals(owner, "P1")) {
+            return Color.DARKBLUE;
+        }
+        if (Objects.equals(owner, "P2")) {
+            return Color.DARKRED;
+        }
+        return Color.BLACK;
     }
 
+    /**
+     * @brief Temporary return for unit symbols, using the first letter
+     * @param unit
+     * @return
+     */
+    private String unitLabel(Unit unit) {
+        String type = unit.getUnitType().getName().toUpperCase();
+
+        return type.substring(0, 1);
+    }
 }

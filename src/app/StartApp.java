@@ -9,6 +9,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.game.Game;
 import model.game.GameFactory;
+import model.map.Terrain;
+import model.unit.Unit;
 import view.board.GameCanvas;
 
 public class StartApp extends Application {
@@ -41,7 +43,28 @@ public class StartApp extends Application {
         infoLabel.setWrapText(true); //Make text dynamic
         
         // Create the game canvas
-        GameCanvas canvas = new GameCanvas();
+        GameCanvas canvas = new GameCanvas(game, 80, 70);
+
+        canvas.setOnTileClicked(position -> {
+            Terrain terrain = game.getTerrain(position);
+            Unit unit = game.getUnit(position);
+
+            StringBuilder text = new StringBuilder();
+            text.append("Tile: [")
+                    .append(position.row())
+                    .append(",")
+                    .append(position.column())
+                    .append("]\n");
+            text.append("Terrain: ").append(terrain).append("\n");
+
+            if (unit == null) {
+                text.append("Unit: none");
+            } else {
+                text.append("Unit: ").append(unit);
+            }
+
+            infoLabel.setText(text.toString());
+        });
 
         // Create a side panel for info display
         VBox sidePanel = new VBox(12, infoLabel); // Spacing of 12 px between future children
