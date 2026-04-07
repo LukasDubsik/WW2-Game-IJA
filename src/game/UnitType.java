@@ -1,4 +1,4 @@
-package ija.ija2025.homework2.game;
+package game;
 
 public enum UnitType {
     // List of the types and their names and values of the UnitType

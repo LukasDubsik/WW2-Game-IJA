@@ -1,4 +1,4 @@
-package ija.ija2025.homework2.common;
+package common;
 
 /**
  * @brief Immutable board position addressed as [row, column].

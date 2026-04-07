@@ -1,6 +1,6 @@
-package ija.ija2025.homework2.game;
+package game;
 
-import ija.ija2025.homework2.common.Position;
+import common.Position;
 
 public class Unit {
 

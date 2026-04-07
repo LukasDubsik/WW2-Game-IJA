@@ -1,8 +1,4 @@
-package ija.ija2025.homework2.game;
-
-import ija.ija2025.homework2.common.GameEvent;
-import ija.ija2025.homework2.common.Position;
-import ija.ija2025.homework2.tool.GameObserver;
+package game;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+
+import common.GameEvent;
+import common.Position;
+import tool.GameObserver;
 
 /**
  * @class Game

@@ -1,6 +1,6 @@
-package ija.ija2025.homework2.tool;
+package tool;
 
-import ija.ija2025.homework2.common.GameEvent;
+import common.GameEvent;
 
 /**
  * @interface GameObserver
