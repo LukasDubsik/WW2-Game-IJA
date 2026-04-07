@@ -63,6 +63,28 @@ public class Game {
     }
 
     /**
+     * @brief Get the terrain at the position
+     * 
+     * @param pos The position where to get the terrain from
+     * 
+     * @return The terrain at the position
+     */
+    public Terrain getTerrain(Position pos) {
+        return map[pos.row()][pos.column()];
+    }
+
+    /**
+     * @brief Get the unit at the position
+     * 
+     * @param pos The position where to get the unit from
+     * 
+     * @return The unit at the position
+     */
+    public Unit getUnit(Position pos) {
+        return units_map.get(pos);
+    }
+
+    /**
      * @brief Add observer to the active list of observers
      * 
      * @param observer The observer class to be added
