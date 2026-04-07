@@ -3,8 +3,13 @@ package view.board;
 import java.util.function.Consumer;
 
 import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import model.game.Game;
 import model.map.Position;
+import model.map.Terrain;
+import model.unit.Unit;
 
 public class GameCanvas extends Canvas {
     
@@ -41,5 +46,49 @@ public class GameCanvas extends Canvas {
 
         // Draw the current game
         draw();
+    }
+
+    public void draw() {
+        // Define a 2d rectangular canvas
+        GraphicsContext gc = getGraphicsContext2D();
+
+        // Set teh size of tey drawing part
+        gc.clearRect(0, 0, tile_size_x, tile_size_y);
+        // And the font size
+        gc.setFont(Font.font(16));
+
+        for (int row = 0; row < game.getRows(); row++) {
+            for (int column = 0; column < game.getColumns(); column++) {
+                // Set up the current position
+                Position pos = new Position(row, column);
+
+                Terrain terrain = game.getTerrain(pos);
+                Unit unit = game.getUnit(pos);
+
+                // Real position on canvas for the hex
+                double x = getHexX(row, column);
+                double y = getHexY(row);
+
+                // The point of the hexagon
+                double[] x_points = getPointsX(x);
+                double[] y_points = getPointsY(y);
+
+                // Set the hexagon backgroud color
+                gc.setFill(terrainColor(terrain));
+                gc.fillPolygon(x_points, y_points, 6);
+
+                // Set the hexagon border color
+                gc.setStroke(Color.BLACK);
+                gc.strokePolygon(x_points, y_points, 6);
+
+                // Add the unit marker
+                if (unit != null) {
+                    // Draw the color for the owner
+                    gc.setFill(ownerColor(unit.getOwner()));
+                    gc.setFont(Font.font(18));
+                    gc.fillText(unitLabel(unit), x - tile_size_x*0.08, y + tile_size_y*0.06);
+                }
+            }
+        }
     }
 }
