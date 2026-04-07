@@ -21,6 +21,8 @@ public final class GameCanvas extends Canvas {
 
     private Consumer<Position> tileClickHandler = position -> {}; ///< The handler for the mouse click
 
+    private double zoom = 1.0; ///< the size of the zoom
+
     /**
      * @brief The constructor of the caanvas
      */
@@ -40,6 +42,24 @@ public final class GameCanvas extends Canvas {
             }
         });
 
+        // Set up the zooming event
+        setOnScroll(event -> {
+            // Determine if zooming up or down
+            if (event.getDeltaY() > 0) {
+                this.zoom *= 1.1;
+            } else if (event.getDeltaY() < 0) {
+                this.zoom /= 1.1;
+            }
+
+            // Set maximum zoom boundaries
+            this.zoom = Math.max(0.3, Math.min(this.zoom, 4.0));
+
+            // Update the canvas
+            updateCanvasSize();
+            draw();
+            event.consume();
+        });
+
         // Draw the current game
         draw();
     }
@@ -53,9 +73,12 @@ public final class GameCanvas extends Canvas {
         GraphicsContext gc = getGraphicsContext2D();
 
         // Set teh size of tey drawing part
-        gc.clearRect(0, 0, tile_size_x, tile_size_y);
+        gc.clearRect(0, 0, getWidth(), getHeight());
         // And the font size
         gc.setFont(Font.font(16));
+
+        //gc.setFill(Color.WHITE);
+        //gc.fillRect(0, 0, getWidth(), getHeight());
 
         for (int row = 0; row < game.getRows(); row++) {
             for (int column = 0; column < game.getColumns(); column++) {
@@ -86,7 +109,7 @@ public final class GameCanvas extends Canvas {
                     // Draw the color for the owner
                     gc.setFill(ownerColor(unit.getOwner()));
                     gc.setFont(Font.font(18));
-                    gc.fillText(unitLabel(unit), x - tile_size_x*0.08, y + tile_size_y*0.06);
+                    gc.fillText(unitLabel(unit), x - getTileX()*0.08, y + getTileY()*0.06);
                 }
             }
         }
@@ -159,8 +182,8 @@ public final class GameCanvas extends Canvas {
      * @return The center of the hexagon x
      */
     private double getHexX(int row, int column) {
-        double row_offset = (row%2 == 1) ? tile_size_x/2.0 : 0.0;
-        return column*tile_size_x + row_offset + tile_size_x/2.0 + 5;
+        double row_offset = (row%2 == 1) ? getTileX()/2.0 : 0.0;
+        return column*getTileX() + row_offset + getTileX()/2.0 + 20;
     }
 
     /**
@@ -171,7 +194,7 @@ public final class GameCanvas extends Canvas {
      * @return The center of the hexagon y
      */
     private double getHexY(int row) {
-        return row*tile_size_y*0.75 + tile_size_y/2.0 + 5;
+        return row*getTileY()*0.75 + getTileY()/2.0 + 30;
     }
 
     /**
@@ -182,7 +205,7 @@ public final class GameCanvas extends Canvas {
      * @return The x positions of the hexagon
      */
     private double[] getPointsX(double x) {
-        double half = tile_size_x/2.0;
+        double half = getTileX()/2.0;
 
         // Return all the positions of the hexagon x
         return new double[] {x, x + half, x + half, x, x - half, x - half};
@@ -196,8 +219,8 @@ public final class GameCanvas extends Canvas {
      * @return The y positions of the hexagon
      */
     private double[] getPointsY(double y) {
-        double half = tile_size_y/2.0;
-        double quarter = tile_size_y/4.0;
+        double half = getTileY()/2.0;
+        double quarter = getTileY()/4.0;
 
         // Return all the positions of the hexagon y
         return new double[] {y - half, y - quarter, y + quarter, y + half, y + quarter, y - quarter};
@@ -212,7 +235,7 @@ public final class GameCanvas extends Canvas {
      * @return The width of the canvas
      */
     private static double canvasWidth(int columns, double tile_x) {
-        return columns*tile_x + tile_x/2.0 + 10;
+        return columns*tile_x + tile_x/2.0 + 60;
     }
 
     /**
@@ -224,7 +247,7 @@ public final class GameCanvas extends Canvas {
      * @return The height of the canvas
      */
     private static double canvasHeight(int rows, double tile_y) {
-        return (rows - 1)*(tile_y*0.75) + tile_y + 10;
+        return (rows - 1)*(tile_y*0.75) + tile_y + 60;
     }
 
     /**
@@ -272,5 +295,18 @@ public final class GameCanvas extends Canvas {
         String type = unit.getUnitType().getName().toUpperCase();
 
         return type.substring(0, 1);
+    }
+
+    private int getTileX() {
+        return (int) (tile_size_x*zoom);
+    }
+
+    private int getTileY() {
+        return (int) (tile_size_y*zoom);
+    }
+
+    private void updateCanvasSize() {
+        setWidth(canvasWidth(game.getColumns(), getTileX()));
+        setHeight(canvasHeight(game.getRows(), getTileY()));
     }
 }

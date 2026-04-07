@@ -2,8 +2,10 @@ package app;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -45,6 +47,9 @@ public class StartApp extends Application {
         // Create the game canvas
         GameCanvas canvas = new GameCanvas(game, 80, 70);
 
+        // Setup a group for the caanvas
+        Group canvas_group = new Group(canvas);
+
         canvas.setOnTileClicked(position -> {
             Terrain terrain = game.getTerrain(position);
             Unit unit = game.getUnit(position);
@@ -74,8 +79,12 @@ public class StartApp extends Application {
         // Arrange the layout of the game
         BorderPane root = new BorderPane();
         // The game is the center stage, info is on the left
-        root.setCenter(canvas);
+        //root.setCenter(canvas);
         root.setLeft(sidePanel);
+
+        ScrollPane scroller = new ScrollPane(canvas_group);
+        scroller.setPannable(true);
+        root.setCenter(scroller);
 
         // Create the scene
         Scene scene = new Scene(root);
