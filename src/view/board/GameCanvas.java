@@ -91,4 +91,30 @@ public class GameCanvas extends Canvas {
             }
         }
     }
+
+    // Function for hex computation
+
+    /**
+     * @brief Get the x position of the hexagon
+     * 
+     * @param row The row position in the map
+     * @param column The column position in the map
+     * 
+     * @return The center of the hexagon x
+     */
+    private double getHexX(int row, int column) {
+        double row_offset = (row%2 == 1) ? tile_size_x/2.0 : 0.0;
+        return column*tile_size_x + row_offset + tile_size_x/2.0 + 5;
+    }
+
+    /**
+     * @brief Get the y position of the hexagon
+     * 
+     * @param row The row position in the map
+     * 
+     * @return The center of the hexagon y
+     */
+    private double getHexY(int row) {
+        return row*tile_size_y*0.75 + tile_size_y/2.0 + 5;
+    }
 }
