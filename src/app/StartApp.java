@@ -2,11 +2,14 @@ package app;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.game.Game;
@@ -82,8 +85,62 @@ public class StartApp extends Application {
         //root.setCenter(canvas);
         root.setLeft(sidePanel);
 
-        ScrollPane scroller = new ScrollPane(canvas_group);
-        scroller.setPannable(true);
+        Group canvasGroup = new Group(canvas);
+
+        StackPane centeredPane = new StackPane(canvasGroup);
+        centeredPane.setAlignment(Pos.CENTER);
+        centeredPane.setStyle("-fx-background-color: black;");
+
+        ScrollPane scroller = new ScrollPane(centeredPane);
+        scroller.setPannable(false);
+        scroller.setStyle("-fx-background: black; -fx-background-color: black;");
+
+        scroller.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
+            centeredPane.setMinSize(newBounds.getWidth(), newBounds.getHeight());
+        });
+
+        scroller.addEventFilter(ScrollEvent.SCROLL, event -> {
+            if (event.getDeltaY() > 0) {
+                canvas.zoomIn();
+            } else if (event.getDeltaY() < 0) {
+                canvas.zoomOut();
+            }
+
+            event.consume();
+        });
+
+        final double[] lastMouse = new double[2];
+
+        canvasGroup.setOnMousePressed(event -> {
+            if (event.isPrimaryButtonDown()) {
+                lastMouse[0] = event.getSceneX();
+                lastMouse[1] = event.getSceneY();
+            }
+        });
+
+        canvasGroup.setOnMouseDragged(event -> {
+            if (!event.isPrimaryButtonDown()) {
+                return;
+            }
+
+            double dx = event.getSceneX() - lastMouse[0];
+            double dy = event.getSceneY() - lastMouse[1];
+
+            lastMouse[0] = event.getSceneX();
+            lastMouse[1] = event.getSceneY();
+
+            double maxX = scroller.getViewportBounds().getWidth() / 2.0;
+            double maxY = scroller.getViewportBounds().getHeight() / 2.0;
+
+            double newX = clamp(canvasGroup.getTranslateX() + dx, -maxX, maxX);
+            double newY = clamp(canvasGroup.getTranslateY() + dy, -maxY, maxY);
+
+            canvasGroup.setTranslateX(newX);
+            canvasGroup.setTranslateY(newY);
+
+            event.consume();
+        });
+
         root.setCenter(scroller);
 
         // Create the scene
@@ -95,5 +152,9 @@ public class StartApp extends Application {
 
         // Show the game
         stage.show();
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }

@@ -21,7 +21,12 @@ public final class GameCanvas extends Canvas {
 
     private Consumer<Position> tileClickHandler = position -> {}; ///< The handler for the mouse click
 
-    private double zoom = 1.0; ///< the size of the zoom
+    private static final double INITIAL_ZOOM = 1.6;
+    private static final double ZOOM_STEP = 1.05;
+    private static final double MIN_ZOOM = 0.85;
+    private static final double MAX_ZOOM = 2.4;
+
+    private double zoom = INITIAL_ZOOM; ///< the size of the zoom
 
     /**
      * @brief The constructor of the caanvas
@@ -42,25 +47,8 @@ public final class GameCanvas extends Canvas {
             }
         });
 
-        // Set up the zooming event
-        setOnScroll(event -> {
-            // Determine if zooming up or down
-            if (event.getDeltaY() > 0) {
-                this.zoom *= 1.1;
-            } else if (event.getDeltaY() < 0) {
-                this.zoom /= 1.1;
-            }
-
-            // Set maximum zoom boundaries
-            this.zoom = Math.max(0.3, Math.min(this.zoom, 4.0));
-
-            // Update the canvas
-            updateCanvasSize();
-            draw();
-            event.consume();
-        });
-
         // Draw the current game
+        updateCanvasSize();
         draw();
     }
 
@@ -72,8 +60,10 @@ public final class GameCanvas extends Canvas {
         // Define a 2d rectangular canvas
         GraphicsContext gc = getGraphicsContext2D();
 
-        // Set teh size of tey drawing part
         gc.clearRect(0, 0, getWidth(), getHeight());
+        gc.setFill(Color.BLACK);
+        gc.fillRect(0, 0, getWidth(), getHeight());
+
         // And the font size
         gc.setFont(Font.font(16));
 
@@ -303,6 +293,20 @@ public final class GameCanvas extends Canvas {
 
     private int getTileY() {
         return (int) (tile_size_y*zoom);
+    }
+
+        public void zoomIn() {
+        zoom *= ZOOM_STEP;
+        zoom = Math.min(zoom, MAX_ZOOM);
+        updateCanvasSize();
+        draw();
+    }
+
+    public void zoomOut() {
+        zoom /= ZOOM_STEP;
+        zoom = Math.max(zoom, MIN_ZOOM);
+        updateCanvasSize();
+        draw();
     }
 
     private void updateCanvasSize() {
