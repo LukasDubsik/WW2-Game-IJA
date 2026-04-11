@@ -50,13 +50,14 @@ public class StartApp extends Application {
         // Create the game canvas
         GameCanvas canvas = new GameCanvas(game, 80, 70);
 
-        // Setup a group for the caanvas
-        Group canvas_group = new Group(canvas);
-
+        // What happens when tile is clicked by a mouse
+        // TODO: This is currently a temporary method for debugging
         canvas.setOnTileClicked(position -> {
+            // The values at the position in the game
             Terrain terrain = game.getTerrain(position);
             Unit unit = game.getUnit(position);
 
+            // Construct the informations to be shown
             StringBuilder text = new StringBuilder();
             text.append("Tile: [")
                     .append(position.row())
@@ -71,6 +72,7 @@ public class StartApp extends Application {
                 text.append("Unit: ").append(unit);
             }
 
+            // Set the text label in teh left corner
             infoLabel.setText(text.toString());
         });
 
@@ -81,66 +83,83 @@ public class StartApp extends Application {
 
         // Arrange the layout of the game
         BorderPane root = new BorderPane();
-        // The game is the center stage, info is on the left
-        //root.setCenter(canvas);
+        // The infor is on the left
         root.setLeft(sidePanel);
 
-        Group canvasGroup = new Group(canvas);
+        // Create a group for the canvas
+        Group canvas_group = new Group(canvas);
 
-        StackPane centeredPane = new StackPane(canvasGroup);
-        centeredPane.setAlignment(Pos.CENTER);
-        centeredPane.setStyle("-fx-background-color: black;");
+        // Center the starting position of the system
+        StackPane centered_pane = new StackPane(canvas_group);
+        centered_pane.setAlignment(Pos.CENTER);
+        centered_pane.setStyle("-fx-background-color: black;");
 
-        ScrollPane scroller = new ScrollPane(centeredPane);
+        // Set the system for scrolling and moving around
+        ScrollPane scroller = new ScrollPane(centered_pane);
         scroller.setPannable(false);
         scroller.setStyle("-fx-background: black; -fx-background-color: black;");
 
-        scroller.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
-            centeredPane.setMinSize(newBounds.getWidth(), newBounds.getHeight());
+        // Ensure that teh center pane for setting the scene in teh center resizes with each 
+        // event upon the scroller
+        scroller.viewportBoundsProperty().addListener((obs, old_bounds, new_bounds) -> {
+            centered_pane.setMinSize(new_bounds.getWidth(), new_bounds.getHeight());
         });
 
+        // Add handler for scrolling 
         scroller.addEventFilter(ScrollEvent.SCROLL, event -> {
+            // Decide if we are zooming in or out
             if (event.getDeltaY() > 0) {
                 canvas.zoomIn();
             } else if (event.getDeltaY() < 0) {
                 canvas.zoomOut();
             }
 
+            // Remove the event, it has been consumed
             event.consume();
         });
 
-        final double[] lastMouse = new double[2];
+        // Store the previous mouse position
+        final double[] mouse = new double[2];
 
-        canvasGroup.setOnMousePressed(event -> {
+        // When the mouse is pressed, remember the starting position for the drag
+        canvas_group.setOnMousePressed(event -> {
             if (event.isPrimaryButtonDown()) {
-                lastMouse[0] = event.getSceneX();
-                lastMouse[1] = event.getSceneY();
+                mouse[0] = event.getSceneX();
+                mouse[1] = event.getSceneY();
             }
         });
 
-        canvasGroup.setOnMouseDragged(event -> {
+        // The left mouse button is held and mouse is being dragged
+        canvas_group.setOnMouseDragged(event -> {
+            // Don't run when we are no longer holding the left button down
             if (!event.isPrimaryButtonDown()) {
                 return;
             }
 
-            double dx = event.getSceneX() - lastMouse[0];
-            double dy = event.getSceneY() - lastMouse[1];
+            // The current displacement from teh start
+            double dx = event.getSceneX() - mouse[0];
+            double dy = event.getSceneY() - mouse[1];
 
-            lastMouse[0] = event.getSceneX();
-            lastMouse[1] = event.getSceneY();
+            // The new position where the mouse got
+            mouse[0] = event.getSceneX();
+            mouse[1] = event.getSceneY();
 
-            double maxX = scroller.getViewportBounds().getWidth() / 2.0;
-            double maxY = scroller.getViewportBounds().getHeight() / 2.0;
+            // Make sure the map can be shifted only by half of the current map size
+            double max_x = scroller.getViewportBounds().getWidth()/2.0;
+            double max_y = scroller.getViewportBounds().getHeight()/2.0;
 
-            double newX = clamp(canvasGroup.getTranslateX() + dx, -maxX, maxX);
-            double newY = clamp(canvasGroup.getTranslateY() + dy, -maxY, maxY);
+            // Find the true new position displacement
+            double x = clamp(canvas_group.getTranslateX() + dx, -max_x, max_x);
+            double y = clamp(canvas_group.getTranslateY() + dy, -max_y, max_y);
 
-            canvasGroup.setTranslateX(newX);
-            canvasGroup.setTranslateY(newY);
+            canvas_group.setTranslateX(x);
+            canvas_group.setTranslateY(y);
 
+            // Consume the event
             event.consume();
         });
 
+        // Center teh scroller on teh center of the all
         root.setCenter(scroller);
 
         // Create the scene
@@ -154,6 +173,16 @@ public class StartApp extends Application {
         stage.show();
     }
 
+    /**
+     * @brief Return the value if within limits, otherwise either min (if smaller)
+     *        and max, if larger than the bounds given.
+     * 
+     * @param value The value to clamp
+     * @param min The lower bound
+     * @param max The upper bound
+     * 
+     * @return The value, if within min/max or the min or max value.
+     */
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
     }
