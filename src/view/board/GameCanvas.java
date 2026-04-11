@@ -67,9 +67,6 @@ public final class GameCanvas extends Canvas {
         // And the font size
         gc.setFont(Font.font(16));
 
-        //gc.setFill(Color.WHITE);
-        //gc.fillRect(0, 0, getWidth(), getHeight());
-
         for (int row = 0; row < game.getRows(); row++) {
             for (int column = 0; column < game.getColumns(); column++) {
                 // Set up the current position
@@ -106,7 +103,7 @@ public final class GameCanvas extends Canvas {
     }
 
     /**
-     * @brief Find the hexagon at this position
+     * @brief Find the hexagon at this position 
      * 
      * @param mouseX The position x whgere mouse clicked
      * @param mouseY The position y where mouse clicked
@@ -278,8 +275,10 @@ public final class GameCanvas extends Canvas {
 
     /**
      * @brief Temporary return for unit symbols, using the first letter
-     * @param unit
-     * @return
+     * 
+     * @param unit The unit class containing the unit's info
+     * 
+     * @return The first letter of the unit's type name
      */
     private String unitLabel(Unit unit) {
         String type = unit.getUnitType().getName().toUpperCase();
@@ -287,28 +286,49 @@ public final class GameCanvas extends Canvas {
         return type.substring(0, 1);
     }
 
+    /**
+     * @brief Get the right position of the tile x coordinate relative to zoom
+     * 
+     * @return The tile's correct position
+     */
     private int getTileX() {
-        return (int) (tile_size_x*zoom);
+        return (int)(tile_size_x*zoom);
     }
 
+    /**
+     * @brief Get the right position of the tile y coordinate relative to zoom
+     * 
+     * @return The tile's correct position
+     */
     private int getTileY() {
-        return (int) (tile_size_y*zoom);
+        return (int)(tile_size_y*zoom);
     }
 
-        public void zoomIn() {
+    /**
+     * @brief Change the zoom when zooming in (called from outside teh canvas)
+     */
+    public void zoomIn() {
         zoom *= ZOOM_STEP;
         zoom = Math.min(zoom, MAX_ZOOM);
+
         updateCanvasSize();
         draw();
     }
 
+    /**
+     * @brief Change the zoom when zooming out (called from outside teh canvas)
+     */
     public void zoomOut() {
         zoom /= ZOOM_STEP;
         zoom = Math.max(zoom, MIN_ZOOM);
+
         updateCanvasSize();
         draw();
     }
 
+    /**
+     * @brief Change the canvas size based on the zoomed system
+     */
     private void updateCanvasSize() {
         setWidth(canvasWidth(game.getColumns(), getTileX()));
         setHeight(canvasHeight(game.getRows(), getTileY()));
