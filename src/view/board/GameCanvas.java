@@ -50,47 +50,46 @@ public final class GameCanvas extends Canvas {
         // Initialized the movement map so all are false
         movement_map = new boolean[game.getRows()][game.getColumns()];
 
-        // Set up the event for mouse click
-        setOnMouseClicked(event -> {
-            // Find the hexagon that has been clicked
-            Position clicked = findHexAt(event.getX(), event.getY());
-
-            // Reset all to false when new click occurs
-            for (boolean[] row : tiles_selected) {
-                Arrays.fill(row, false);
-            }
-            for (boolean[] row : movement_map) {
-                Arrays.fill(row, false);
-            }
-
-            if (clicked != null) {
-                // Run the vent registered for it
-                tileClickHandler.accept(clicked);
-
-                // Based if there is unit on the tile
-                Unit unit = game.getUnit(clicked);
-
-                // If there is an unit, set the movement tiles
-                if (unit != null) {
-                    List<Position> tiles_possible = game.getReachableTiles(clicked);
-
-                    // For each position that is reachable, mark it in the map
-                    for (Position tile : tiles_possible) {
-                        movement_map[tile.row()][tile.column()] = true;
-                    }
-                } else {
-                    // Otherwise normal tile was clicked so register it
-                    tiles_selected[clicked.row()][clicked.column()] = true;
-                }
-            }
-
-            // Redraw the canvas
-            draw();
-        });
-
         // Draw the current game
         updateCanvasSize();
         draw();
+    }
+
+    public void handleClick(double x, double y) {
+        // Find the hexagon that has been clicked
+        Position clicked = findHexAt(x, y);
+
+        // Reset all to false when new click occurs
+        for (boolean[] row : tiles_selected) {
+            Arrays.fill(row, false);
+        }
+        for (boolean[] row : movement_map) {
+            Arrays.fill(row, false);
+        }
+
+        if (clicked != null) {
+            // Run the vent registered for it
+            tileClickHandler.accept(clicked);
+
+            // Based if there is unit on the tile
+            Unit unit = game.getUnit(clicked);
+
+            // If there is an unit, set the movement tiles
+            if (unit != null) {
+                List<Position> tiles_possible = game.getReachableTiles(clicked);
+
+                // For each position that is reachable, mark it in the map
+                for (Position tile : tiles_possible) {
+                    movement_map[tile.row()][tile.column()] = true;
+                }
+            } else {
+                // Otherwise normal tile was clicked so register it
+                tiles_selected[clicked.row()][clicked.column()] = true;
+            }
+        }
+
+        // Redraw the canvas
+        draw();        
     }
 
     public void setOnTileClicked(Consumer<Position> handler) {

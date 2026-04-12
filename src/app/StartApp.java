@@ -94,6 +94,15 @@ public class StartApp extends Application {
         centered_pane.setAlignment(Pos.CENTER);
         centered_pane.setStyle("-fx-background-color: black;");
 
+        // Add event when clicked onto
+        centered_pane.setOnMouseClicked(event -> {
+            javafx.geometry.Point2D localPoint = canvas.sceneToLocal(event.getSceneX(), event.getSceneY());
+
+            canvas.handleClick(localPoint.getX(), localPoint.getY());
+
+            event.consume();
+        });
+
         // Set the system for scrolling and moving around
         ScrollPane scroller = new ScrollPane(centered_pane);
         scroller.setPannable(false);
