@@ -33,6 +33,8 @@ public final class GameCanvas extends Canvas {
     private final boolean[][] tiles_selected; ///< The map of the selected tiles
     private final boolean[][] movement_map; ///< The map of tiles the unit can move to
 
+    Position previous_position; ///< The previously selected position
+
     /**
      * @brief The constructor of the caanvas
      */
@@ -59,6 +61,13 @@ public final class GameCanvas extends Canvas {
         // Find the hexagon that has been clicked
         Position clicked = findHexAt(x, y);
 
+        // Register, if clicked space was already selected as possible unit movement
+        // If so, this means movement of the unit
+        if (movement_map[clicked.row()][clicked.column()]) {
+            // Move the unit from the previous to the current position
+            game.moveUnit(previous_position, clicked);
+        }
+
         // Reset all to false when new click occurs
         for (boolean[] row : tiles_selected) {
             Arrays.fill(row, false);
@@ -68,7 +77,7 @@ public final class GameCanvas extends Canvas {
         }
 
         if (clicked != null) {
-            // Run the vent registered for it
+            // Run the event registered for it
             tileClickHandler.accept(clicked);
 
             // Based if there is unit on the tile
@@ -87,6 +96,9 @@ public final class GameCanvas extends Canvas {
                 tiles_selected[clicked.row()][clicked.column()] = true;
             }
         }
+
+        // Set this position as the previous one for next click
+        previous_position = clicked;
 
         // Redraw the canvas
         draw();        
