@@ -1,6 +1,7 @@
 package view.board;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -30,6 +31,7 @@ public final class GameCanvas extends Canvas {
     private double zoom = INITIAL_ZOOM; ///< the size of the zoom
 
     private final boolean[][] tiles_selected; ///< The map of the selected tiles
+    private final boolean[][] movement_map; ///< The map of tiles the unit can move to
 
     /**
      * @brief The constructor of the caanvas
@@ -45,26 +47,45 @@ public final class GameCanvas extends Canvas {
         // Initialized the selected tiles so all are false
         tiles_selected = new boolean[game.getRows()][game.getColumns()];
 
-        // Set up the evnt for mouse click
+        // Initialized the movement map so all are false
+        movement_map = new boolean[game.getRows()][game.getColumns()];
+
+        // Set up the event for mouse click
         setOnMouseClicked(event -> {
             // Find the hexagon that has been clicked
             Position clicked = findHexAt(event.getX(), event.getY());
+
+            // Reset all to false when new click occurs
+            for (boolean[] row : tiles_selected) {
+                Arrays.fill(row, false);
+            }
+            for (boolean[] row : movement_map) {
+                Arrays.fill(row, false);
+            }
 
             if (clicked != null) {
                 // Run the vent registered for it
                 tileClickHandler.accept(clicked);
 
-                // Reset all to falSe when new click occurs
-                for (boolean[] row : tiles_selected) {
-                    Arrays.fill(row, false);
+                // Based if there is unit on the tile
+                Unit unit = game.getUnit(clicked);
+
+                // If there is an unit, set the movement tiles
+                if (unit != null) {
+                    List<Position> tiles_possible = game.getReachableTiles(clicked);
+
+                    // For each position that is reachable, mark it in the map
+                    for (Position tile : tiles_possible) {
+                        movement_map[tile.row()][tile.column()] = true;
+                    }
+                } else {
+                    // Otherwise normal tile was clicked so register it
+                    tiles_selected[clicked.row()][clicked.column()] = true;
                 }
-
-                // Set the hexagon as clicked
-                tiles_selected[clicked.row()][clicked.column()] = true;
-
-                // Redraw the canvas
-                draw();
             }
+
+            // Redraw the canvas
+            draw();
         });
 
         // Draw the current game
@@ -107,11 +128,20 @@ public final class GameCanvas extends Canvas {
                 gc.setFill(terrainColor(terrain));
                 gc.fillPolygon(x_points, y_points, 6);
 
-                // If the hexagon is selected
+                // If this tile is clicked and doesn't contain an unit
                 if (tiles_selected[row][column]) {
                     // Add a blue tint to it
                     gc.save();
                     gc.setFill(Color.color(0, 0, 1.0, 0.22));
+                    gc.fillPolygon(x_points, y_points, 6);
+                    gc.restore();
+                }
+
+                // If the clicked tile included unit and this tile is a possible movement option
+                if (movement_map[row][column]) {
+                    // Add a white tint to it
+                    gc.save();
+                    gc.setFill(Color.color(0, 0, 1.0, 0.42));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
