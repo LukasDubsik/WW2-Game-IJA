@@ -6,16 +6,18 @@ package model.map;
  */
 public enum Terrain {
     // List of the types and their names of the Terrain and values
-    // Goes as: NAME, DEFENCE_BONUS, INFANTRY_COST, VEHICLE_COST
-    PLAIN("P", 1, 1, 1),
-    FOREST("F", 2, 1, 2),
-    MOUNTAIN("M", 4, 2, Integer.MAX_VALUE),
-    WATER("W", 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
-    CITY("C", 3, 1, 1),
-    FACTORY("T", 3, 1, 1),
-    HQ("H", 4, 1, 1);
+    // Goes as: CODE, DISPLAY_NAME, ASSET_KEY, DEFENCE_BONUS, INFANTRY_COST, VEHICLE_COST
+    PLAIN("P", "Plain", "snow_plain", 1, 1, 1),
+    FOREST("F", "Forest", "winter_forest", 2, 1, 2),
+    MOUNTAIN("M", "Mountain", "snow_ridge", 4, 2, Integer.MAX_VALUE),
+    WATER("W", "Water", "winter_water", 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
+    CITY("C", "City", "winter_city", 3, 1, 1),
+    FACTORY("T", "Factory", "winter_factory", 3, 1, 1),
+    HQ("H", "HQ", "winter_hq", 4, 1, 1);
 
-    private String val; ///< Holder for the String value of the enum
+    private String code; ///< Holder for the String value of the enum
+    private String display_name; ///< The name of the main type
+    private String asset_key; ///< The true asset held there
     private int defence_bonus; ///< Value for defence
     private int infantry_cost; ///< Value of cost for infantry to cross
     private int vehicle_cost;  ///< Value of cost for vehicle to cross
@@ -25,8 +27,10 @@ public enum Terrain {
      * 
      * @param val_ The String value of the enum.
      */
-    Terrain(String val_, int defence_bonus_, int infantry_cost_, int vehicle_cost_) {
-        this.val = val_;
+    Terrain(String code_, String display_name_, String asset_key_, int defence_bonus_, int infantry_cost_, int vehicle_cost_) {
+        this.code = code_;
+        this.display_name = display_name_;
+        this.asset_key = asset_key_;
         this.defence_bonus = defence_bonus_;
         this.infantry_cost = infantry_cost_;
         this.vehicle_cost = vehicle_cost_;
