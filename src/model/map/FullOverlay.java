@@ -19,4 +19,22 @@ public class FullOverlay {
         this.position = position_;
         this.overlay = overlay_;
     }
+
+    /**
+     * @brief Get the position of the overlay
+     * 
+     * @return The {@link #position}
+     */
+    public Position getPosition() {
+        return position;
+    }
+
+    /**
+     * @brief Get the overlay enum
+     * 
+     * @return The {@link #overlay}
+     */
+    public Overlay getOverlay() {
+        return overlay;
+    }
 }
