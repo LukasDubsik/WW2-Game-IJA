@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import model.map.MapElement;
+import model.map.Overlay;
 import model.map.Terrain;
 
 /**
@@ -69,6 +70,8 @@ public class GameFactory {
         int columns = -1;
         // Holder for the Terrain after conversion
         List<Terrain[]> rows = new ArrayList<>();
+        // Holder for the overlays after the cnversion
+        List<Overlay[]> rows_o = new ArrayList<>();
 
         // Iterate through the map and process the values
         for (String row : map) {
@@ -89,8 +92,8 @@ public class GameFactory {
             MapElement[] map_elements = new MapElement[tokens.length];
 
             // For each element extract the map system
-            for (String elem : tokens) {
-                
+            for (int i = 0; i < tokens.length; i++) {
+                map_elements[i] = new MapElement(tokens[i]);
             }
 
             // Check the columns
@@ -103,20 +106,29 @@ public class GameFactory {
             // Create Terrain array for this row
             Terrain[] row_terrain = new Terrain[columns];
 
-            for (int i = 0; i < tokens.length; i++) {
-                row_terrain[i] = Terrain.convert(tokens[i]);
+            for (int i = 0; i < map_elements.length; i++) {
+                row_terrain[i] = map_elements[i].getTerrain();
+            }
+
+            // Create Overlay array for this row
+            Overlay[] overlay_terrain = new Overlay[columns];
+
+            for (int i = 0; i < map_elements.length; i++) {
+                overlay_terrain[i] = map_elements[i].getOverlay();
             }
 
             // Push back into the general List holder
             rows.add(row_terrain);
+            rows_o.add(overlay_terrain);
         }
 
-        if (rows.isEmpty()) {
-            throw new IllegalArgumentException("Map can't be empty.");
+        if (rows.isEmpty() || rows_o.isEmpty()) {
+            throw new IllegalArgumentException("Map can't be empty!");
         }
 
         // Create the final array holder of the map
         Terrain[][] board_terrain = rows.toArray(Terrain[][]::new);
+        Overlay[][] overlay_terrain = rows_o.toArray(Overlay[][]::new);
 
         // Return the create game from the map
         return new Game(board_terrain);
