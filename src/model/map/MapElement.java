@@ -37,5 +37,21 @@ public class MapElement {
         this.overlay = Overlay.convert(overlay_);
     }
     
-    
+    /**
+     * @brief Get the element's overlay
+     * 
+     * @return The elements's overlay type.
+     */
+    public Overlay getOverlay() {
+        return this.overlay;
+    }
+
+    /**
+     * @brief Return the element's terrain type
+     * 
+     * @return The elements' terrain type.
+     */
+    public Terrain getTerrain() {
+        return this.terrain;
+    }
 }
