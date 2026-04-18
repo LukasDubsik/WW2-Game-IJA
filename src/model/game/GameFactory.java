@@ -90,7 +90,7 @@ public class GameFactory {
 
             // For each element extract the map system
             for (String elem : tokens) {
-                Map
+                
             }
 
             // Check the columns

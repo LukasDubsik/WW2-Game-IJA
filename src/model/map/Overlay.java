@@ -82,4 +82,32 @@ public enum Overlay {
     public int getVehicleCostModifier() {
         return vehicle_cost_modifier;
     }
+
+    /**
+     * @brief Given enum in teh String form, create from it the enum
+     * 
+     * @param type The string enum value.
+     * 
+     * @return The enum created from the String input.
+     */
+    public static Overlay convert(String type) {
+        // Check that the input isn't null
+        if (type == null || type.trim().length() == 0) {
+            throw new IllegalArgumentException("Expected a single Letter input.");
+        }
+
+        // Attempt to normalie the string
+        String type_proc = type.trim().toUpperCase();
+
+        // Attempt to convert to the enum
+        return switch (type_proc) {
+            case "N" -> NONE;
+            case "T" -> TRENCH;
+            case "B" -> BARBED_WIRE;
+            case "C" -> CRATER;
+            case "R" -> RUBBLE;
+            case "S" -> SNOW_DRIFT;
+            default -> throw new IllegalArgumentException("Unsupported overlay value: " + type_proc);
+        };
+    }
 }
