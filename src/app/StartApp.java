@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.game.Game;
 import model.game.GameFactory;
+import model.map.Overlay;
 import model.map.Terrain;
 import model.unit.Unit;
 import view.board.GameCanvas;
@@ -28,11 +29,11 @@ public class StartApp extends Application {
 
         // Temporary data for testing the app starts and load
         String[] map_test = {
-            "P P F C H",
-            "P W F P P",
-            "M P P F P",
-            "P F P P P",
-            "H P P C P"
+            "[P,B] [P,N] [P,N] [P,N] [P,N]",
+            "[P,N] [P,N] [P,N] [P,N] [P,N]",
+            "[P,N] [P,N] [P,N] [P,N] [P,N]",
+            "[P,N] [P,N] [P,N] [P,N] [P,N]",
+            "[P,N] [P,N] [P,N] [P,N] [P,N]"
         };
 
         // Load the map into a working game -> using the game factory
@@ -56,6 +57,7 @@ public class StartApp extends Application {
             // The values at the position in the game
             Terrain terrain = game.getTerrain(position);
             Unit unit = game.getUnit(position);
+            Overlay overlay = game.getOverlay(position);
 
             // Construct the informations to be shown
             StringBuilder text = new StringBuilder();
@@ -64,7 +66,11 @@ public class StartApp extends Application {
                     .append(",")
                     .append(position.column())
                     .append("]\n");
-            text.append("Terrain: ").append(terrain).append("\n");
+                        text.append("Terrain: ").append(terrain).append("\n");
+            text.append("Overlay: ").append(overlay).append("\n");
+            text.append("Defence bonus: ").append(game.getCombinedDefenceBonus(position)).append("\n");
+            text.append("Move cost Infantry: ").append(game.getCombinedMovementInfantry(position)).append("\n");
+            text.append("Move cost Vehicle: ").append(game.getCombinedMovementVehicle(position)).append("\n");
 
             if (unit == null) {
                 text.append("Unit: none");

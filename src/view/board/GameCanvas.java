@@ -62,6 +62,11 @@ public final class GameCanvas extends Canvas {
         // Find the hexagon that has been clicked
         Position clicked = findHexAt(x, y);
 
+        // Clicking outside of the map shouldn't crash the whole system
+        if (clicked == null) {
+            return;
+        }
+
         // Register, if clicked space was already selected as possible unit movement
         // If so, this means movement of the unit
         if (movement_map[clicked.row()][clicked.column()]) {

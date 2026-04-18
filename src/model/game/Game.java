@@ -437,7 +437,7 @@ public class Game {
     /**
      * @brief Get the effective movement cost at a tile for a concrete unit
      */
-    private int getMovementCost(Position pos, Unit unit) {
+    public int getMovementCost(Position pos, Unit unit) {
         return switch (unit.getUnitType().getMovementType()) {
             case INFANTRY -> getCombinedMovementInfantry(pos);
             case VEHICLE -> getCombinedMovementVehicle(pos);
@@ -462,11 +462,11 @@ public class Game {
         return combined >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) combined;
     }
 
-    private int getCombinedMovementInfantry(Position pos) {
+    public int getCombinedMovementInfantry(Position pos) {
         return combineMoveCost(getTerrain(pos).getInfantryMovementCost(), getOverlay(pos).getInfantryMovementCost());
     }
 
-    private int getCombinedMovementVehicle(Position pos) {
+    public int getCombinedMovementVehicle(Position pos) {
         return combineMoveCost(getTerrain(pos).getVehicleMovementCost(), getOverlay(pos).getVehicleMovementCost());
     }
 

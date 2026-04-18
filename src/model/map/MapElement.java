@@ -23,14 +23,19 @@ public class MapElement {
         String inside = elem.substring(1, elem.length() - 1);
 
         // Check that in the middle (second position) lays ","
-        if (!",".equals(inside.substring(2))) {
+        if (!",".equals(inside.substring(1, 2))) {
+            throw new IllegalArgumentException("The map is elem is not of the form [X,Y]");
+        }
+
+        // Check the expected length
+        if (inside.length() != 3) {
             throw new IllegalArgumentException("The map is elem is not of the form [X,Y]");
         }
 
         // Take the first and last -> the X,Y
         // First should be a terrain, the second the overlay
-        String terrain_ = inside.substring(1);
-        String overlay_ = inside.substring(inside.length() - 1);
+        String terrain_ = inside.substring(0, 1);
+        String overlay_ = inside.substring(2, 3);
 
         // Convert to the enums
         this.terrain = Terrain.convert(terrain_);
