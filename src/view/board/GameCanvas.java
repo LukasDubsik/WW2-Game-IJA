@@ -1,12 +1,16 @@
 package view.board;
 
+import java.io.File;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import model.game.Game;
@@ -33,6 +37,8 @@ public final class GameCanvas extends Canvas {
 
     private final boolean[][] tiles_selected; ///< The map of the selected tiles
     private final boolean[][] movement_map; ///< The map of tiles the unit can move to
+
+    private final Map<Terrain, Image> terrain_image_cache = new HashMap<>(); ///< Holder of cached terrain images
 
     Position previous_position; ///< The previously selected position
 
@@ -142,9 +148,8 @@ public final class GameCanvas extends Canvas {
                 double[] x_points = getPointsX(x);
                 double[] y_points = getPointsY(y);
 
-                // Set the hexagon backgroud color
-                gc.setFill(terrainColor(terrain));
-                gc.fillPolygon(x_points, y_points, 6);
+                // Draw either the loaded terrain asset or the fallback color for it
+                drawTerrainTile(gc, terrain, x, y, x_points, y_points);
 
                 // Simple debug rendering of overlay markers
                 if (overlay != Overlay.NONE) {
@@ -328,23 +333,81 @@ public final class GameCanvas extends Canvas {
     }
 
     /**
-     * @brief Temporary color for testing the map generation
+     * @brief Draw the terrain tile either from asset or from fallback color
      * 
-     * @param terrain The terrain type
-     * 
-     * @return The color for the terrain type
+     * @param gc The graphics context used for drawing
+     * @param terrain The terrain type being drawn
+     * @param center_x The center x of the tile
+     * @param center_y The center y of the tile
+     * @param x_points The x coordinates of the tile polygon
+     * @param y_points The y coordinates of the tile polygon
      */
-    private Color terrainColor(Terrain terrain) {
-        return switch (terrain) {
-            case PLAIN -> Color.BEIGE;
-            case FOREST -> Color.DARKSEAGREEN;
-            case MOUNTAIN -> Color.LIGHTGRAY;
-            case WATER -> Color.LIGHTSKYBLUE;
-            case CITY -> Color.KHAKI;
-            case FACTORY -> Color.LIGHTCORAL;
-            case HQ -> Color.PLUM;
-        };
-    }  
+    private void drawTerrainTile(GraphicsContext gc, Terrain terrain, double center_x, double center_y, double[] x_points, double[] y_points) {
+        TerrainStyle style = TerrainCatalog.resolve(terrain);
+        Image terrain_image = loadTerrainImage(terrain, style);
+
+        // If the terrain image exists, clip the drawing into the hexagon and draw it
+        if (terrain_image != null) {
+            // Move to teh origin
+            gc.save();
+            gc.beginPath();
+            gc.moveTo(x_points[0], y_points[0]);
+
+            // Prepare teh omage lines
+            for (int i = 1; i < x_points.length; i++) {
+                gc.lineTo(x_points[i], y_points[i]);
+            }
+
+            // Draw the image
+            gc.closePath();
+            gc.clip();
+            gc.drawImage(terrain_image, center_x - getTileX()/2.0, center_y - getTileY()/2.0, getTileX(), getTileY());
+            gc.restore();
+            return;
+        }
+
+        // Otherwise fall back to color rendering so the game remains functional
+        gc.setFill(style.fallback_color());
+        gc.fillPolygon(x_points, y_points, 6);
+    }
+
+    /**
+     * @brief Load the terrain image into cache, if available on disk
+     * 
+     * @param terrain The terrain type whose image should be loaded
+     * @param style The style describing where the asset is located
+     * 
+     * @return The loaded image or null if no valid image exists yet
+     */
+    private Image loadTerrainImage(Terrain terrain, TerrainStyle style) {
+        // If already known, return the cached value
+        if (terrain_image_cache.containsKey(terrain)) {
+            return terrain_image_cache.get(terrain);
+        }
+
+        File asset_file = new File(style.asset_path());
+
+        // If the asset isn't there yet, remember it and fall back to color rendering
+        if (!asset_file.isFile()) {
+            terrain_image_cache.put(terrain, null);
+            return null;
+        }
+
+        try {
+            Image loaded = new Image(asset_file.toURI().toString(), false);
+
+            if (loaded.isError()) {
+                terrain_image_cache.put(terrain, null);
+                return null;
+            }
+
+            terrain_image_cache.put(terrain, loaded);
+            return loaded;
+        } catch (Exception e) {
+            terrain_image_cache.put(terrain, null);
+            return null;
+        }
+    }
 
     /**
      * @brief Temporary class for owner unit color
