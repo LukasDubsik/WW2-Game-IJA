@@ -10,6 +10,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import model.game.Game;
+import model.map.Overlay;
 import model.map.Position;
 import model.map.Terrain;
 import model.unit.Unit;
@@ -126,6 +127,7 @@ public final class GameCanvas extends Canvas {
 
                 Terrain terrain = game.getTerrain(pos);
                 Unit unit = game.getUnit(pos);
+                Overlay overlay = game.getOverlay(pos);
 
                 // Real position on canvas for the hex
                 double x = getHexX(row, column);
@@ -138,6 +140,19 @@ public final class GameCanvas extends Canvas {
                 // Set the hexagon backgroud color
                 gc.setFill(terrainColor(terrain));
                 gc.fillPolygon(x_points, y_points, 6);
+
+                // Simple debug rendering of overlay markers
+                if (overlay != Overlay.NONE) {
+                    gc.save();
+                    gc.setFill(Color.color(1.0, 1.0, 1.0, 0.90));
+                    gc.setFont(Font.font(10));
+                    gc.fillText(
+                            overlay.getShortLabel(),
+                            x - getTileX() * 0.12,
+                            y - getTileY() * 0.18
+                    );
+                    gc.restore();
+                }
 
                 // If this tile is clicked and doesn't contain an unit
                 if (tiles_selected[row][column]) {
