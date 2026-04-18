@@ -9,11 +9,11 @@ package model.map;
  */
 public enum Overlay {
     NONE("None", "N", 0, 0, 0),
-    TRENCH("Trench", "TR", 2, 1, 2),
-    BARBED_WIRE("Barbed Wire", "BW", 0, 1, 2),
-    CRATER("Crater", "CR", 1, 1, 1),
-    RUBBLE("Rubble", "RB", 1, 1, 2),
-    SNOW_DRIFT("Snow Drift", "SD", 0, 1, 1);
+    TRENCH("Trench", "T", 2, 1, 2),
+    BARBED_WIRE("Barbed Wire", "B", 0, 1, 2),
+    CRATER("Crater", "C", 1, 1, 1),
+    RUBBLE("Rubble", "R", 1, 1, 2),
+    SNOW_DRIFT("Snow Drift", "S", 0, 1, 1);
 
     private final String display_name; ///< The name by which the overlay is displayed
     private final String short_label; ///< The label for identification
