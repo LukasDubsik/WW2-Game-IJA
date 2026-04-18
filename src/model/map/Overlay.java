@@ -61,7 +61,7 @@ public enum Overlay {
      * 
      * @return The {@link #defence_bonus_modifier}
      */
-    public int getDefenceBonusModifier() {
+    public int getDefenceBonus() {
         return defence_bonus_modifier;
     }
 
@@ -70,7 +70,7 @@ public enum Overlay {
      * 
      * @return The {@link #infantry_cost_modifier}
      */
-    public int getInfantryCostModifier() {
+    public int getInfantryMovementCost() {
         return infantry_cost_modifier;
     }
 
@@ -79,7 +79,7 @@ public enum Overlay {
      * 
      * @return The {@link #vehicle_cost_modifier}
      */
-    public int getVehicleCostModifier() {
+    public int getVehicleMovementCost() {
         return vehicle_cost_modifier;
     }
 

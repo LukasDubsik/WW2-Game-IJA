@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
+import model.map.Overlay;
 import model.map.Position;
 import model.map.Terrain;
 import model.unit.Unit;
@@ -23,7 +24,9 @@ import model.unit.UnitType;
 public class Game {
 
     // The values held by the class
-    private final Terrain[][] map; ///< The map of the game
+    private final Terrain[][] map; ///< The map of the game -> in terms of terrain
+    private final Overlay[][] overlay_map; ///< The map of the game -> in terms of overlay
+
     private final Map<Position, Unit> units_map = new HashMap<>(); ///< Position to unit
 
     private final int rows; ///< Number of rows of the map
@@ -36,12 +39,14 @@ public class Game {
      * 
      * @param map_ The array map - already converted to the Terrain enum
      */
-    Game(Terrain[][] map_) {
+    Game(Terrain[][] map_, Overlay[][] overlay_) {
         // Make sure the games are independent by copying the input map
         this.map = copyInputMap(map_);
         // Acquire some values for easier future analysis
         this.rows = map.length;
         this.columns = map[0].length;
+        // Copy the overlay map
+        this.overlay_map = copyOverlayMap(overlay_, rows, columns);
     }
 
     /**
@@ -71,6 +76,17 @@ public class Game {
      */
     public Terrain getTerrain(Position pos) {
         return map[pos.row()][pos.column()];
+    }
+
+    /**
+     * @brief Get the overlay at the position
+     * 
+     * @param pos The position where to get the overlay from
+     * 
+     * @return The overlay at the position
+     */
+    public Overlay getOverlay(Position pos) {
+        return overlay_map[pos.row()][pos.column()];
     }
 
     /**
@@ -300,7 +316,7 @@ public class Game {
                 }
 
                 // Then compute a new value
-                int move_score = unit.getUnitType().getMovementCost(getTerrainAtPosition(neigh));
+                int move_score = unit.getUnitType().getMovementCost(getTerrain(neigh));
                 // Ignore infinite values -> Water
                 if (move_score == Integer.MAX_VALUE) {
                     continue;
@@ -351,17 +367,6 @@ public class Game {
     }
 
     /**
-     * @brief Get the terrain at the map's position
-     * 
-     * @param pos The position to which to get the terrain from
-     * 
-     * @return The terrain at the position.
-     */
-    private Terrain getTerrainAtPosition(Position pos) {
-        return map[pos.row()][pos.column()];
-    }
-
-    /**
      * @brief Copies the incoming map into a new form to make sure the games stay independent
      * 
      * @param map_in The input map of Terrain enums
@@ -378,6 +383,91 @@ public class Game {
 
         // Return the copied form
         return copy;
+    }
+
+    /**
+     * @brief Copies the incoming overlay map or creates an empty one if null
+     */
+    private static Overlay[][] copyOverlayMap(Overlay[][] overlay_, int rows, int columns) {
+        // CXreate the copy map
+        Overlay[][] copy = new Overlay[rows][columns];
+
+        // Fill the map with NONE as a base
+        for (int row = 0; row < rows; row++) {
+            Arrays.fill(copy[row], Overlay.NONE);
+        }
+
+        // If nothing was provided, no overlays are present
+        if (overlay_ == null) {
+            return copy;
+        }
+
+        // Check that dimensions match
+        if (overlay_.length != rows) {
+            throw new IllegalArgumentException("Overlay row count must match terrain row count.");
+        }
+
+        // Then, finally, start copying
+        for (int row = 0; row < rows; row++) {
+            // If dimensions don't match a rectangle
+            if (overlay_[row] == null || overlay_[row].length != columns) {
+                throw new IllegalArgumentException("Overlay map must have same rectangular shape as terrain map.");
+            }
+
+            // If okay, copy
+            for (int column = 0; column < columns; column++) {
+                copy[row][column] = overlay_[row][column] == null ? Overlay.NONE : overlay_[row][column];
+            }
+        }
+
+        return copy;
+    }
+
+    // To get combined costs
+
+    /**
+     * @brief Get the effective defence bonus = terrain + overlay
+     * 
+     * @param pos The position of the defence bonus.
+     */
+    public int getCombinedDefenceBonus(Position pos) {
+        return getTerrain(pos).getDefenceBonus() + getOverlay(pos).getDefenceBonus();
+    }
+
+    /**
+     * @brief Get the effective movement cost at a tile for a concrete unit
+     */
+    private int getMovementCost(Position pos, Unit unit) {
+        return switch (unit.getUnitType().getMovementType()) {
+            case INFANTRY -> getCombinedMovementInfantry(pos);
+            case VEHICLE -> getCombinedMovementVehicle(pos);
+        };
+    }
+
+    /**
+     * @brief Combine terrain movement cost with overlay modifier.
+     *        Impassable terrain stays impassable.
+     * 
+     * @param base_cost The standart cost of terrain movement
+     * @param overlay_modifier The modifier added to the movement by the overlay
+     */
+    private static int combineMoveCost(int base_cost, int overlay_modifier) {
+        // Maximum cost still stays maximum
+        if (base_cost == Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+
+        // Return the combined cost
+        long combined = (long) base_cost + overlay_modifier;
+        return combined >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) combined;
+    }
+
+    private int getCombinedMovementInfantry(Position pos) {
+        return combineMoveCost(getTerrain(pos).getInfantryMovementCost(), getOverlay(pos).getInfantryMovementCost());
+    }
+
+    private int getCombinedMovementVehicle(Position pos) {
+        return combineMoveCost(getTerrain(pos).getVehicleMovementCost(), getOverlay(pos).getVehicleMovementCost());
     }
 
     // Classes for search algorithm

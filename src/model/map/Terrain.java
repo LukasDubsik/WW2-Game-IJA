@@ -41,7 +41,7 @@ public enum Terrain {
      * 
      * @return The cost of the infantry movement.
      */
-    public int getInfantryCost() {
+    public int getInfantryMovementCost() {
         return infantry_cost;
     }
 
@@ -50,8 +50,17 @@ public enum Terrain {
      * 
      * @return The cost of the vehicle movement.
      */
-    public int getVehicleCost() {
+    public int getVehicleMovementCost() {
         return vehicle_cost;
+    }
+
+    /**
+     * @brief Get the defence bonus of the terrain
+     * 
+     * @return The terrain's defence bonus
+     */
+    public int getDefenceBonus() {
+        return defence_bonus;
     }
 
     /**

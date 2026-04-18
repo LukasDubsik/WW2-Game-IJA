@@ -131,6 +131,6 @@ public class GameFactory {
         Overlay[][] overlay_terrain = rows_o.toArray(Overlay[][]::new);
 
         // Return the create game from the map
-        return new Game(board_terrain);
+        return new Game(board_terrain, overlay_terrain);
     }
 }
