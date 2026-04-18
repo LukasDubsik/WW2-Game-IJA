@@ -335,18 +335,16 @@ public final class GameCanvas extends Canvas {
      * @return The color for the terrain type
      */
     private Color terrainColor(Terrain terrain) {
-        String name = terrain.name();
-
-        if (name.contains("P")) return Color.BEIGE;
-        if (name.contains("F")) return Color.DARKSEAGREEN;
-        if (name.contains("M")) return Color.LIGHTGRAY;
-        if (name.contains("W")) return Color.LIGHTSKYBLUE;
-        if (name.contains("C")) return Color.KHAKI;
-        if (name.contains("F")) return Color.LIGHTCORAL;
-        if (name.contains("H")) return Color.PLUM;
-
-        return Color.WHITE;
-    } 
+        return switch (terrain) {
+            case PLAIN -> Color.BEIGE;
+            case FOREST -> Color.DARKSEAGREEN;
+            case MOUNTAIN -> Color.LIGHTGRAY;
+            case WATER -> Color.LIGHTSKYBLUE;
+            case CITY -> Color.KHAKI;
+            case FACTORY -> Color.LIGHTCORAL;
+            case HQ -> Color.PLUM;
+        };
+    }  
 
     /**
      * @brief Temporary class for owner unit color
