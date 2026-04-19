@@ -1,5 +1,7 @@
 package app;
 
+import java.nio.file.Path;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -31,24 +33,33 @@ public class StartApp extends Application {
     @Override
     public void start(Stage stage) {
 
-        // Temporary data for testing the app starts and load
-        String[] map_test = {
-            "[P,N] [P,B] [P,T] [P,C] [P,R] [P,S] [F,N] [F,T] [F,S]",
-            "[P,N] [P,N] [P,B] [P,T] [P,C] [P,R] [F,N] [F,C] [F,R]",
-            "[M,N] [M,C] [M,R] [P,N] [W,N] [W,S] [C,N] [C,R] [C,B]",
-            "[M,N] [M,N] [P,S] [P,N] [W,N] [W,N] [C,N] [T,N] [T,R]",
-            "[P,N] [F,N] [F,T] [P,C] [P,N] [P,B] [P,S] [T,N] [H,N]",
-            "[P,R] [F,R] [M,C] [P,N] [C,C] [C,R] [P,T] [H,T] [H,N]",
-            "[P,N] [P,S] [P,B] [F,N] [F,S] [M,N] [W,N] [C,N] [T,N]"
-        };
+        // Load one of the generated historical maps from file
+        // To switch scenario, change the file name below.
+        Path map_path = Path.of("lib/maps/heiligenbeil_pocket_1945.map");
 
         // Load the map into a working game -> using the game factory
-        Game game = GameFactory.createGame(map_test);
+        Game game = GameFactory.createGame(map_path);
 
-        // Preload some testing units -> This will be removed later, for testing
-        game.createUnit("Wehrmacht Rifle Squad", "P1", 0, 0);
-        game.createUnit("Panzer IV Ausf. J", "P1", 2, 1);
-        game.createUnit("ZiS-3 Field Gun", "P2", 4, 4);
+        // Preload some testing units directly in code for now
+        // Scenario setup:
+        // P1 = Soviets attacking from the west / south-west
+        // P2 = Germans defending the coastal corridor
+
+        // Soviet testing force
+        game.createUnit("IS-1 Heavy Tank", "P1", 6, 0);
+        game.createUnit("M3 Half-track", "P1", 6, 1);
+        game.createUnit("ZiS-3 Field Gun", "P1", 5, 0);
+        game.createUnit("Soviet Assault Sapper Squad", "P1", 6, 2);
+        game.createUnit("DP-27 Team", "P1", 7, 1);
+        game.createUnit("BA-64 Armored Car", "P1", 7, 0);
+
+        // German testing force
+        game.createUnit("Panzer IV Ausf. J", "P2", 0, 10);
+        game.createUnit("Sd.Kfz. 251/1 Half-track", "P2", 2, 9);
+        game.createUnit("Sd.Kfz. 234/2 Puma", "P2", 5, 10);
+        game.createUnit("Wehrmacht Rifle Squad", "P2", 1, 9);
+        game.createUnit("Grenadier Squad", "P2", 4, 9);
+        game.createUnit("MG 42 Team", "P2", 0, 9);
 
         // Experimenting with some base labels
         Label infoLabel = new Label("Click a tile.");
@@ -57,7 +68,7 @@ public class StartApp extends Application {
         // Label holding the currently active turn/player
         Label turnLabel = new Label();
         updateTurnLabel(turnLabel, game);
-        
+
         // Create the game canvas
         GameCanvas canvas = new GameCanvas(game, 80, 70);
 
@@ -76,7 +87,7 @@ public class StartApp extends Application {
                     .append(",")
                     .append(position.column())
                     .append("]\n");
-                        text.append("Terrain: ").append(terrain).append("\n");
+            text.append("Terrain: ").append(terrain).append("\n");
             text.append("Overlay: ").append(overlay).append("\n");
             text.append("Defence bonus: ").append(game.getCombinedDefenceBonus(position)).append("\n");
             text.append("Move cost Infantry: ").append(formatMovementCost(game.getCombinedMovementInfantry(position))).append("\n");
@@ -88,18 +99,17 @@ public class StartApp extends Application {
                 text.append("Unit: ").append(unit);
             }
 
-            // Set the text label in teh left corner
+            // Set the text label in the left corner
             infoLabel.setText(text.toString());
         });
 
         // Create a side panel for info display
         VBox sidePanel = new VBox(12, infoLabel); // Spacing of 12 px between future children
-        sidePanel.setPadding(new Insets(12)); // 
+        sidePanel.setPadding(new Insets(12));
         sidePanel.setPrefWidth(220);
 
         // Arrange the layout of the game
         BorderPane root = new BorderPane();
-        // The infor is on the left
         root.setLeft(sidePanel);
 
         // Create a group for the canvas
@@ -124,22 +134,20 @@ public class StartApp extends Application {
         scroller.setPannable(false);
         scroller.setStyle("-fx-background: black; -fx-background-color: black;");
 
-        // Ensure that teh center pane for setting the scene in teh center resizes with each 
+        // Ensure that the center pane for setting the scene in the center resizes with each
         // event upon the scroller
         scroller.viewportBoundsProperty().addListener((obs, old_bounds, new_bounds) -> {
             centered_pane.setMinSize(new_bounds.getWidth(), new_bounds.getHeight());
         });
 
-        // Add handler for scrolling 
+        // Add handler for scrolling
         scroller.addEventFilter(ScrollEvent.SCROLL, event -> {
-            // Decide if we are zooming in or out
             if (event.getDeltaY() > 0) {
                 canvas.zoomIn();
             } else if (event.getDeltaY() < 0) {
                 canvas.zoomOut();
             }
 
-            // Remove the event, it has been consumed
             event.consume();
         });
 
@@ -156,12 +164,11 @@ public class StartApp extends Application {
 
         // The left mouse button is held and mouse is being dragged
         canvas_group.setOnMouseDragged(event -> {
-            // Don't run when we are no longer holding the left button down
             if (!event.isPrimaryButtonDown()) {
                 return;
             }
 
-            // The current displacement from teh start
+            // The current displacement from the start
             double dx = event.getSceneX() - mouse[0];
             double dy = event.getSceneY() - mouse[1];
 
@@ -180,11 +187,10 @@ public class StartApp extends Application {
             canvas_group.setTranslateX(x);
             canvas_group.setTranslateY(y);
 
-            // Consume the event
             event.consume();
         });
 
-        // Center teh scroller on teh center of the all
+        // Center the scroller on the center of the all
         root.setCenter(scroller);
 
         // Create a lower control bar for turn handling
@@ -201,45 +207,25 @@ public class StartApp extends Application {
         Button nextTurnButton = new Button("Next turn");
 
         nextTurnButton.setOnAction(event -> {
-            // Move the game to the next turn
             game.nextTurn();
-
-            // Remove all previous visual movement selections
             canvas.clearSelections();
-
-            // Update the lower label
             updateTurnLabel(turnLabel, game);
-
-            // Temporary debugging info
             infoLabel.setText("Turn: " + game.getCurrentTurn() + "\nCurrent player: " + game.getCurrentPlayer());
         });
 
-        // Put the controls together
         bottomPanel.getChildren().addAll(turnLabel, spacer, nextTurnButton);
-
-        // Place the panel at the bottom
         root.setBottom(bottomPanel);
 
-        // Create the scene
         Scene scene = new Scene(root);
 
-        // Set some last game properties
         stage.setTitle("IJA game");
         stage.setScene(scene);
-
-        // Show the game
         stage.show();
     }
 
     /**
      * @brief Return the value if within limits, otherwise either min (if smaller)
      *        and max, if larger than the bounds given.
-     * 
-     * @param value The value to clamp
-     * @param min The lower bound
-     * @param max The upper bound
-     * 
-     * @return The value, if within min/max or the min or max value.
      */
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
@@ -247,9 +233,6 @@ public class StartApp extends Application {
 
     /**
      * @brief Update the lower turn label text
-     * 
-     * @param turnLabel The label to be updated
-     * @param game The game from which to read the active turn
      */
     private static void updateTurnLabel(Label turnLabel, Game game) {
         turnLabel.setText("Turn: " + game.getCurrentTurn() + " | Current player: " + game.getCurrentPlayer());
@@ -257,10 +240,6 @@ public class StartApp extends Application {
 
     /**
      * @brief Return the movement cost as a readable value
-     * 
-     * @param movement_cost The movement cost to format
-     * 
-     * @return Either the integer cost or INF for impassable terrain
      */
     private static String formatMovementCost(int movement_cost) {
         if (movement_cost == Integer.MAX_VALUE) {
