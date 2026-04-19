@@ -29,11 +29,13 @@ public class StartApp extends Application {
 
         // Temporary data for testing the app starts and load
         String[] map_test = {
-            "[P,B] [P,N] [P,N] [P,N] [P,N]",
-            "[P,N] [P,N] [P,N] [P,N] [P,N]",
-            "[P,N] [P,N] [P,N] [P,N] [P,N]",
-            "[P,N] [P,N] [P,N] [P,N] [P,N]",
-            "[P,N] [P,N] [P,N] [P,N] [P,N]"
+            "[P,N] [P,B] [P,T] [P,C] [P,R] [P,S] [F,N] [F,T] [F,S]",
+            "[P,N] [P,N] [P,B] [P,T] [P,C] [P,R] [F,N] [F,C] [F,R]",
+            "[M,N] [M,C] [M,R] [P,N] [W,N] [W,S] [C,N] [C,R] [C,B]",
+            "[M,N] [M,N] [P,S] [P,N] [W,N] [W,N] [C,N] [T,N] [T,R]",
+            "[P,N] [F,N] [F,T] [P,C] [P,N] [P,B] [P,S] [T,N] [H,N]",
+            "[P,R] [F,R] [M,C] [P,N] [C,C] [C,R] [P,T] [H,T] [H,N]",
+            "[P,N] [P,S] [P,B] [F,N] [F,S] [M,N] [W,N] [C,N] [T,N]"
         };
 
         // Load the map into a working game -> using the game factory
