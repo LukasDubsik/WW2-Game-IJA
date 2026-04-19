@@ -5,11 +5,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.Set;
 
 import model.map.Overlay;
 import model.map.Position;
@@ -36,6 +34,8 @@ public class Game {
 
     private int current_turn = 1; ///< The current turn number
     private String current_player = "P1"; ///< The currently active player
+
+    private List<Position> last_movement_path = new ArrayList<>(); ///< The most recently computed movement path
     
     /**
      * @brief The constructor of the Game class
@@ -68,6 +68,25 @@ public class Game {
      */
     public int getRows() {
         return this.rows;
+    }
+
+    /**
+     * @brief Get the last movement path used by the game
+     * 
+     * @return Copy of the last movement path
+     */
+    public List<Position> getLastMovementPath() {
+        return new ArrayList<>(last_movement_path);
+    }
+
+    /**
+     * @brief Get the unit currently standing at the given position
+     * 
+     * @param pos The position to inspect
+     * @return The unit at the position, or null if none is there
+     */
+    public Unit getUnitAt(Position pos) {
+        return units_map.get(pos);
     }
 
     /**
@@ -206,21 +225,14 @@ public class Game {
             return false;
         }
 
-        // If outside of the map, invalid
-        if (!isInside(to)) {
+        // Get the exact path
+        List<Position> path = getMovementPath(from, to);
+        if (path.isEmpty()) {
             return false;
         }
 
-        // If already occupied, invalid
-        if (units_map.containsKey(to)) {
-            return false;
-        }
-
-        // Check that the target tile is actually reachable
-        List<Position> possible = getReachableTiles(from);
-        if (!possible.contains(to)) {
-            return false;
-        }
+        // Keep the path in memory for later use/debugging
+        this.last_movement_path = new ArrayList<>(path);
 
         // Move the unit within the map
         units_map.remove(from);
@@ -229,18 +241,14 @@ public class Game {
 
         // For now, moving the unit consumes its turn action
         // TODO: Once attack / capture / wait are implemented properly,
-        //       this should happen only after the final chosen action,
-        //       not immediately after the physical move itself.
+        //       this should happen only after the final chosen action.
         unit.setAlreadyPlayed(true);
-
-        // TODO: When attack / capture / wait are added, notify observers
-        //       after the whole action sequence is resolved.
 
         return true;
     }
 
     /**
-     * @brief Given the current position, perform weighted pathfinding and find all the reachbale positions viable
+     * @brief Given the current position, perform weighted pathfinding and find all the reachable positions viable
      * 
      * @param pos The position of the unit
      */
@@ -252,7 +260,7 @@ public class Game {
             return List.of();
         }
 
-        // Only the currently active player can query movement for own units
+        // Check that the unit belongs to the currently active player
         if (!unit.getOwner().equals(this.current_player)) {
             return List.of();
         }
@@ -262,110 +270,20 @@ public class Game {
             return List.of();
         }
 
-        // Initialize the values for search
-        // The map of the reachable positions with the best cost possible
-        Map<Position, Integer> best = new HashMap<>();
-        // The search queu to explore -> Djikstra
-        PriorityQueue<SearchNode> frontier = new PriorityQueue<>(new SearchNodeComparator());
-        // The final set of reachable tiles
-        Set<Position> reachable = new HashSet<>();
+        // Run the path search
+        SearchResult result = runMovementSearch(unit, pos);
 
-        // Start the frontier of expansion with the starting point
-        // The score is zero as no cost to get where it is already there
-        frontier.add(new SearchNode(pos, 0));
-
-        // Add to the best cost map (since the start will always be the best -> can't go below zero)
-        best.put(pos, 0);
-
-        // Iterate until there are things to explore
-        while (!frontier.isEmpty()) {
-            // Pop the current node
-            SearchNode current_node = frontier.poll();
-            // Pop the node value that can be in the best found
-            Integer best_so_far = best.get(current_node.pos);
-
-            // If it is worse, break, we have already a better option
-            if (best_so_far != null && current_node.score > best_so_far) {
-                continue;
-            }
-
-            // Create a list of neighbors then, this node is worth exploring
-            List<Position> neighbors = new ArrayList<>();
-
-            // The rows and columns
-            int row = current_node.pos.row();
-            int col = current_node.pos.column();
-
-            // Decide on teh neighbors based on the row type
-            if (row % 2 == 0) {
-                neighbors.add(new Position(row - 1, col - 1));
-                neighbors.add(new Position(row - 1, col));
-                neighbors.add(new Position(row, col - 1));
-                neighbors.add(new Position(row, col + 1));
-                neighbors.add(new Position(row + 1, col - 1));
-                neighbors.add(new Position(row + 1, col));
-            } else {
-                neighbors.add(new Position(row - 1, col));
-                neighbors.add(new Position(row - 1, col + 1));
-                neighbors.add(new Position(row, col - 1));
-                neighbors.add(new Position(row, col + 1));
-                neighbors.add(new Position(row + 1, col));
-                neighbors.add(new Position(row + 1, col + 1));
-            }
-
-            // Then for each of the neighbors, compute cost
-            for (Position neigh : neighbors) {
-                // Check if it is inside the bounds - if not, skip
-                if (!isInside(neigh)) {
-                    continue;
-                }
-
-                // Get the current occupant
-                Unit occupant = units_map.get(neigh);
-                // Check if truly occupied
-                boolean occupied = occupant != null;
-
-                // If occupied by an enemy, skip, blocking a movement
-                if (occupied && !occupant.getOwner().equals(unit.getOwner())) {
-                    continue;
-                }
-
-                // Then compute a new value -> includes both terrain and overlay modifiers
-                int move_score = getMovementCost(neigh, unit);
-                // Ignore infinite values -> Water/movement impossible
-                if (move_score == Integer.MAX_VALUE) {
-                    continue;
-                }
-
-                // The full score of movement
-                int neigh_score = move_score + current_node.score;
-
-                // If the value is larger thaan the unit can covcer, ignore
-                if (neigh_score > unit.getUnitType().getMovement()) {
-                    continue;
-                }
-
-                // Compare with the old best
-                Integer curr_score = best.get(neigh);
-                if (curr_score == null || neigh_score < curr_score) {
-                    // Update the values
-                    best.put(neigh, neigh_score);
-                    frontier.add(new SearchNode(neigh, neigh_score));
-
-                    // Add only those places that is not the origin -> tehnicaly can't reach where I already am
-                    // Friendly tiles are pass through, but not viable end positions
-                    if (!neigh.equals(pos) && !occupied) {
-                        reachable.add(neigh);
-                    }
-                }
+        // Collect all reachable tiles except the origin
+        List<Position> reachable = new ArrayList<>();
+        for (Position tile : result.best.keySet()) {
+            if (!tile.equals(pos)) {
+                reachable.add(tile);
             }
         }
 
-        // Return the results
-        List<Position> result = new ArrayList<>(reachable);
         // Sort by closest position first
-        Collections.sort(result, new PositionComparator());
-        return result;
+        Collections.sort(reachable, new PositionComparator());
+        return reachable;
     }
 
     /**
@@ -534,6 +452,183 @@ public class Game {
         notifyObservers(new GameEvent());
     }
 
+    /**
+     * @brief Perform weighted search for a unit and remember the parent nodes for path reconstruction
+     * 
+     * @param unit The unit for which the movement is computed
+     * @param start The starting position of the unit
+     * 
+     * @return Holder with both best score and parent maps
+     */
+    private SearchResult runMovementSearch(Unit unit, Position start) {
+        // The map of the reachable positions with the best cost possible
+        Map<Position, Integer> best = new HashMap<>();
+        // Map for reconstructing the path
+        Map<Position, Position> parent = new HashMap<>();
+        // The search queue to explore -> Dijkstra
+        PriorityQueue<SearchNode> frontier = new PriorityQueue<>(new SearchNodeComparator());
+
+        // Start at the unit origin
+        best.put(start, 0);
+        frontier.add(new SearchNode(start, 0));
+
+        // Explore until nothing remains
+        while (!frontier.isEmpty()) {
+            SearchNode current_node = frontier.poll();
+
+            Integer best_so_far = best.get(current_node.pos);
+            if (best_so_far != null && current_node.score > best_so_far) {
+                continue;
+            }
+
+            // Create a list of neighbors then, this node is worth exploring
+            List<Position> neighbors = new ArrayList<>();
+
+            // The rows and columns
+            int row = current_node.pos.row();
+            int col = current_node.pos.column();
+
+            // Decide on teh neighbors based on the row type
+            if (row % 2 == 0) {
+                neighbors.add(new Position(row - 1, col - 1));
+                neighbors.add(new Position(row - 1, col));
+                neighbors.add(new Position(row, col - 1));
+                neighbors.add(new Position(row, col + 1));
+                neighbors.add(new Position(row + 1, col - 1));
+                neighbors.add(new Position(row + 1, col));
+            } else {
+                neighbors.add(new Position(row - 1, col));
+                neighbors.add(new Position(row - 1, col + 1));
+                neighbors.add(new Position(row, col - 1));
+                neighbors.add(new Position(row, col + 1));
+                neighbors.add(new Position(row + 1, col));
+                neighbors.add(new Position(row + 1, col + 1));
+            }
+
+            // Analyze each of the neighbors
+            for (Position neigh : neighbors) {
+                // Check map bounds
+                if (!isInside(neigh)) {
+                    continue;
+                }
+
+                // Ignore occupied positions
+                if (units_map.containsKey(neigh)) {
+                    continue;
+                }
+
+                // Compute the full movement cost = terrain + overlay modifier
+                int move_cost = getMovementCost(neigh, unit);
+                if (move_cost == Integer.MAX_VALUE) {
+                    continue;
+                }
+
+                // Compute total score to get there
+                int neigh_score = current_node.score + move_cost;
+                if (neigh_score > unit.getUnitType().getMovement()) {
+                    continue;
+                }
+
+                // Compare to the current best found score
+                Integer curr_score = best.get(neigh);
+                if (curr_score == null || neigh_score < curr_score) {
+                    best.put(neigh, neigh_score);
+                    parent.put(neigh, current_node.pos);
+                    frontier.add(new SearchNode(neigh, neigh_score));
+                }
+            }
+        }
+
+        return new SearchResult(best, parent);
+    }
+
+    /**
+     * @brief Reconstruct the path from start to goal using the parent map
+     * 
+     * @param parent The parent map created by the weighted search
+     * @param start The starting position
+     * @param goal The target position
+     * 
+     * @return Ordered list of positions from start to goal. Empty if not reachable.
+     */
+    private List<Position> reconstructPath(Map<Position, Position> parent, Position start, Position goal) {
+        List<Position> reversed = new ArrayList<>();
+
+        // If the goal is not the start and no parent exists, then it was not reached
+        if (!goal.equals(start) && !parent.containsKey(goal)) {
+            return new ArrayList<>();
+        }
+
+        // Walk backwards from the goal
+        Position current = goal;
+        reversed.add(current);
+
+        while (!current.equals(start)) {
+            current = parent.get(current);
+
+            // Safety guard in case something goes wrong
+            if (current == null) {
+                return new ArrayList<>();
+            }
+
+            reversed.add(current);
+        }
+
+        // Reverse into start -> ... -> goal order
+        List<Position> result = new ArrayList<>();
+        for (int i = reversed.size() - 1; i >= 0; i--) {
+            result.add(reversed.get(i));
+        }
+
+        return result;
+    }
+
+    /**
+     * @brief Get the exact movement path from one position to another
+     * 
+     * @param from The starting position
+     * @param to The target position
+     * 
+     * @return Ordered list of tiles from start to end. Empty if movement is invalid.
+     */
+    public List<Position> getMovementPath(Position from, Position to) {
+        // Check that there is an unit on the start tile
+        Unit unit = units_map.get(from);
+        if (unit == null) {
+            return new ArrayList<>();
+        }
+
+        // Respect turn ownership
+        if (!unit.getOwner().equals(this.current_player)) {
+            return new ArrayList<>();
+        }
+
+        // Respect the already-played flag
+        if (unit.hasAlreadyPlayed()) {
+            return new ArrayList<>();
+        }
+
+        // End must be inside map and unoccupied
+        if (!isInside(to)) {
+            return new ArrayList<>();
+        }
+
+        if (units_map.containsKey(to)) {
+            return new ArrayList<>();
+        }
+
+        // Run the weighted search
+        SearchResult result = runMovementSearch(unit, from);
+
+        // Check that the tile is actually reachable
+        if (!result.best.containsKey(to)) {
+            return new ArrayList<>();
+        }
+
+        // Reconstruct and return the exact path
+        return reconstructPath(result.parent, from, to);
+    }
+
     // Classes for search algorithm
 
     /**
@@ -593,6 +688,26 @@ public class Game {
         @Override
         public int compare(SearchNode one, SearchNode two) {
             return Integer.compare(one.score, two.score);
+        }
+    }
+
+    /**
+     * @class SearchResult
+     * @brief Holder for pathfinding results
+     */
+    private class SearchResult {
+        Map<Position, Integer> best; ///< The best score found for each tile
+        Map<Position, Position> parent; ///< The parent tile from which the node was reached
+
+        /**
+         * @brief Constructor of the SearchResult class
+         * 
+         * @param best_ Best score map
+         * @param parent_ Parent map for path reconstruction
+         */
+        SearchResult(Map<Position, Integer> best_, Map<Position, Position> parent_) {
+            this.best = best_;
+            this.parent = parent_;
         }
     }
 }

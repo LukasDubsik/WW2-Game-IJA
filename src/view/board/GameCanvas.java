@@ -8,11 +8,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 import model.game.Game;
 import model.map.Overlay;
 import model.map.Position;
@@ -43,6 +46,11 @@ public final class GameCanvas extends Canvas {
 
     Position previous_position; ///< The previously selected position
 
+    private boolean movement_animation_running = false; ///< Whether the unit is currently animating
+    private Unit animated_unit = null; ///< The unit currently being animated
+    private Position animation_origin = null; ///< The original tile of the animated unit
+    private Position animation_draw_position = null; ///< The current tile at which the animated unit is drawn
+
     /**
      * @brief The constructor of the caanvas
      */
@@ -65,7 +73,12 @@ public final class GameCanvas extends Canvas {
         draw();
     }
 
-    public void handleClick(double x, double y) {
+        public void handleClick(double x, double y) {
+        // Ignore clicks while animation is running
+        if (movement_animation_running) {
+            return;
+        }
+
         // Find the hexagon that has been clicked
         Position clicked = findHexAt(x, y);
 
@@ -74,42 +87,57 @@ public final class GameCanvas extends Canvas {
             return;
         }
 
-        // Register, if clicked space was already selected as possible unit movement
-        // If so, this means movement of the unit
+        // If the tile is one of the movement options, animate movement and stop here
         if (movement_map[clicked.row()][clicked.column()]) {
-            // Move the unit from the previous to the current position
-            game.moveUnit(previous_position, clicked);
+            animateMovement(previous_position, clicked);
+            return;
         }
 
-        // Reset all selections when new click occurs
+        // Reset all to false when new click occurs
         resetSelections();
 
-        if (clicked != null) {
-            // Run the event registered for it
-            tileClickHandler.accept(clicked);
+        // Run the event registered for it
+        tileClickHandler.accept(clicked);
 
-            // Based if there is unit on the tile
-            Unit unit = game.getUnit(clicked);
+        // Based if there is unit on the tile
+        Unit unit = game.getUnit(clicked);
 
-            // If there is an unit and it belongs to the active player, set movement tiles
-            if (unit != null && Objects.equals(unit.getOwner(), game.getCurrentPlayer())) {
-                List<Position> tiles_possible = game.getReachableTiles(clicked);
+        // If there is an unit, set the movement tiles
+        if (unit != null) {
+            List<Position> tiles_possible = game.getReachableTiles(clicked);
 
-                // For each position that is reachable, mark it in the map
-                for (Position tile : tiles_possible) {
-                    movement_map[tile.row()][tile.column()] = true;
-                }
-            } else {
-                // Otherwise normal tile was clicked so register it
-                tiles_selected[clicked.row()][clicked.column()] = true;
+            // For each position that is reachable, mark it in the map
+            for (Position tile : tiles_possible) {
+                movement_map[tile.row()][tile.column()] = true;
             }
+        } else {
+            // Otherwise normal tile was clicked so register it
+            tiles_selected[clicked.row()][clicked.column()] = true;
         }
 
         // Set this position as the previous one for next click
         previous_position = clicked;
 
         // Redraw the canvas
-        draw();        
+        draw();
+    }
+
+    /**
+     * @brief Draw one unit at the given tile position
+     * 
+     * @param gc The graphics context
+     * @param unit The unit to draw
+     * @param pos The tile position where to draw it
+     */
+    private void drawUnit(GraphicsContext gc, Unit unit, Position pos) {
+        // Real position on canvas for the hex
+        double x = getHexX(pos.row(), pos.column());
+        double y = getHexY(pos.row());
+
+        // Draw the color for the owner
+        gc.setFill(ownerColor(unit.getOwner()));
+        gc.setFont(Font.font(18));
+        gc.fillText(unitLabel(unit), x - getTileX()*0.08, y + getTileY()*0.06);
     }
 
     public void setOnTileClicked(Consumer<Position> handler) {
@@ -147,7 +175,7 @@ public final class GameCanvas extends Canvas {
                 // Draw either the loaded terrain asset or the fallback color for it
                 drawTerrainTile(gc, terrain, x, y, x_points, y_points);
 
-                // Draw the overlay icon in the corner of the tile
+                // Draw the overlay icon if an overlay exists on the tile
                 if (overlay != Overlay.NONE) {
                     drawOverlayIcon(gc, overlay, x, y);
                 }
@@ -156,7 +184,7 @@ public final class GameCanvas extends Canvas {
                 if (tiles_selected[row][column]) {
                     // Add a blue tint to it
                     gc.save();
-                    gc.setFill(Color.color(0, 0, 1.0, 0.14));
+                    gc.setFill(Color.color(0, 0, 1.0, 0.22));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
@@ -165,7 +193,7 @@ public final class GameCanvas extends Canvas {
                 if (movement_map[row][column]) {
                     // Add a white tint to it
                     gc.save();
-                    gc.setFill(Color.color(0, 0, 1.0, 0.24));
+                    gc.setFill(Color.color(0, 0, 1.0, 0.42));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
@@ -174,14 +202,27 @@ public final class GameCanvas extends Canvas {
                 gc.setStroke(Color.BLACK);
                 gc.strokePolygon(x_points, y_points, 6);
 
+                // If the unit is currently being animated, do not draw it on its original tile
+                if (movement_animation_running
+                        && animated_unit != null
+                        && animation_origin != null
+                        && pos.equals(animation_origin)
+                        && unit == animated_unit) {
+                    unit = null;
+                }
+
                 // Add the unit marker
                 if (unit != null) {
-                    // Draw the color for the owner
-                    gc.setFill(ownerColor(unit.getOwner()));
-                    gc.setFont(Font.font(18));
-                    gc.fillText(unitLabel(unit), x - getTileX()*0.08, y + getTileY()*0.06);
+                    drawUnit(gc, unit, pos);
                 }
             }
+        }
+
+        // Draw the animated unit on its temporary animation tile
+        if (movement_animation_running
+                && animated_unit != null
+                && animation_draw_position != null) {
+            drawUnit(gc, animated_unit, animation_draw_position);
         }
     }
 
@@ -431,6 +472,66 @@ public final class GameCanvas extends Canvas {
         gc.save();
         gc.drawImage(overlay_image, icon_x, icon_y, icon_size, icon_size);
         gc.restore();
+    }
+
+    /**
+     * @brief Animate the movement of a unit step by step over the path tiles
+     * 
+     * @param from Starting position
+     * @param to Target position
+     */
+    private void animateMovement(Position from, Position to) {
+        // Ask the game for the exact movement path
+        List<Position> path = game.getMovementPath(from, to);
+        if (path.isEmpty()) {
+            return;
+        }
+
+        // Get the unit to animate
+        Unit unit = game.getUnitAt(from);
+        if (unit == null) {
+            return;
+        }
+
+        // Prepare animation state
+        movement_animation_running = true;
+        animated_unit = unit;
+        animation_origin = from;
+        animation_draw_position = from;
+
+        // Create the timeline
+        Timeline timeline = new Timeline();
+
+        // Add one frame per path tile
+        for (int i = 0; i < path.size(); i++) {
+            Position step = path.get(i);
+
+            timeline.getKeyFrames().add(
+                new KeyFrame(Duration.millis(120 * i), event -> {
+                    animation_draw_position = step;
+                    draw();
+                })
+            );
+        }
+
+        // Once animation finishes, perform the real move in the game state
+        timeline.setOnFinished(event -> {
+            movement_animation_running = false;
+            animated_unit = null;
+            animation_origin = null;
+            animation_draw_position = null;
+
+            // Perform the final logical move
+            game.moveUnit(from, to);
+
+            // Clear visual selections after moving
+            clearSelections();
+
+            // Redraw final state
+            draw();
+        });
+
+        timeline.play();
     }
 
     /**
