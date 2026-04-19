@@ -46,9 +46,9 @@ public class StartApp extends Application {
         Game game = GameFactory.createGame(map_test);
 
         // Preload some testing units -> This will be removed later, for testing
-        game.createUnit("Infantry", "P1", 0, 0);
-        game.createUnit("Tank", "P1", 2, 1);
-        game.createUnit("Artillery", "P2", 4, 4);
+        game.createUnit("Wehrmacht Rifle Squad", "P1", 0, 0);
+        game.createUnit("Panzer IV Ausf. J", "P1", 2, 1);
+        game.createUnit("ZiS-3 Field Gun", "P2", 4, 4);
 
         // Experimenting with some base labels
         Label infoLabel = new Label("Click a tile.");
