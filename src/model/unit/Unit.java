@@ -9,6 +9,7 @@ public class Unit {
     private String owner; ///< the owner of the unit
     private Position position; ///< Where the unit is currently located
     private int current_hp; ///< What is the current hp of the unit
+    private boolean already_played; ///< Whether the unit has already used its turn action
 
     /**
      * @brief Constructor of the Unit class. The hp is initialised at maximum.
@@ -22,6 +23,7 @@ public class Unit {
         this.owner = owner;
         this.position = position;
         this.current_hp = unitType.getMaxHP();
+        this.already_played = false;
     }
 
     // Get teh values of the Unit
@@ -69,6 +71,24 @@ public class Unit {
      */
     public void setPosition(Position pos) {
         this.position = pos;
+    }
+
+    /**
+     * @brief Check whether the unit has already acted this turn
+     * 
+     * @return True if already acted, false otherwise
+     */
+    public boolean hasAlreadyPlayed() {
+        return already_played;
+    }
+
+    /**
+     * @brief Set whether the unit has already acted this turn
+     * 
+     * @param already_played_ The new value of the played state
+     */
+    public void setAlreadyPlayed(boolean already_played_) {
+        this.already_played = already_played_;
     }
 
     /**

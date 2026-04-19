@@ -177,67 +177,64 @@ public class Game {
     }
 
     /**
-     * @brief Move the unit from position to the other
+     * @brief Move a unit from one position to another if the move is valid
      * 
-     * @param from The position to move from
-     * @param to The position to move to
+     * @param from Starting position
+     * @param to Target position
      * 
-     * @return True if movement proceeded, false otherwise
+     * @return True if movement was performed, false otherwise
      */
     public boolean moveUnit(Position from, Position to) {
-        // Check that the position s for moving are valid
+        // Basic null protection
         if (from == null || to == null) {
             return false;
         }
 
-        // Check at other possibilities
-
-        // Can't move outside of teh board
-        if (!isInside(to)) {
-            return false;
-        }
-
-        // Can't start from outside the border
-        if (!isInside(from)) {
-            return false;
-        }
-
-        // Get the unit at the position
-        Unit unit = this.units_map.get(from);
-        
         // Check that there is any unit at the position even
+        Unit unit = this.units_map.get(from);
         if (unit == null) {
             return false;
         }
 
-        // The unit can only be moved during its owner's turn
+        // Check that the unit belongs to the active player
         if (!unit.getOwner().equals(this.current_player)) {
             return false;
         }
 
-        // Can move in the same position -> like artillery
-        if (from.equals(to)) {
-            notifyObservers(new GameEvent());
-            return true;
+        // Check that the unit has not yet played this turn
+        if (unit.hasAlreadyPlayed()) {
+            return false;
         }
 
-        // Can't move to an already occupied place
+        // If outside of the map, invalid
+        if (!isInside(to)) {
+            return false;
+        }
+
+        // If already occupied, invalid
         if (units_map.containsKey(to)) {
             return false;
         }
 
-        // Can only move to where it can access
-        if (!getReachableTiles(from).contains(to)) {
+        // Check that the target tile is actually reachable
+        List<Position> possible = getReachableTiles(from);
+        if (!possible.contains(to)) {
             return false;
         }
 
-        // Then we can move
+        // Move the unit within the map
         units_map.remove(from);
         unit.setPosition(to);
         units_map.put(to, unit);
 
-        // Notify the observers
-        notifyObservers(new GameEvent());
+        // For now, moving the unit consumes its turn action
+        // TODO: Once attack / capture / wait are implemented properly,
+        //       this should happen only after the final chosen action,
+        //       not immediately after the physical move itself.
+        unit.setAlreadyPlayed(true);
+
+        // TODO: When attack / capture / wait are added, notify observers
+        //       after the whole action sequence is resolved.
 
         return true;
     }
@@ -257,6 +254,11 @@ public class Game {
 
         // Only the currently active player can query movement for own units
         if (!unit.getOwner().equals(this.current_player)) {
+            return List.of();
+        }
+
+        // Check that the unit has not already acted this turn
+        if (unit.hasAlreadyPlayed()) {
             return List.of();
         }
 
@@ -328,9 +330,9 @@ public class Game {
                     continue;
                 }
 
-                // Then compute a new value
-                int move_score = unit.getUnitType().getMovementCost(getTerrain(neigh));
-                // Ignore infinite values -> Water
+                // Then compute a new value -> includes both terrain and overlay modifiers
+                int move_score = getMovementCost(neigh, unit);
+                // Ignore infinite values -> Water/movement impossible
                 if (move_score == Integer.MAX_VALUE) {
                     continue;
                 }
@@ -505,15 +507,28 @@ public class Game {
      * @brief Shift the game to the next turn
      */
     public void nextTurn() {
-        // For now, keep the turn system simple -> only P1 and P2 alternate
+        // Switch the active player
         if (this.current_player.equals("P1")) {
             this.current_player = "P2";
         } else {
             this.current_player = "P1";
         }
 
-        // Advance the turn counter as well
+        // Advance the turn counter
         this.current_turn++;
+
+        // Reset the units of the newly active player
+        for (Unit unit : units_map.values()) {
+            if (unit.getOwner().equals(this.current_player)) {
+                unit.setAlreadyPlayed(false);
+            }
+        }
+
+        // TODO: Later, at turn start, also handle:
+        //       - repairs
+        //       - income
+        //       - capture progress / reset logic if needed
+        //       - artillery move/attack state if separated
 
         // Notify the observers that the game changed
         notifyObservers(new GameEvent());

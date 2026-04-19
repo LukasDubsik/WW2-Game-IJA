@@ -79,8 +79,8 @@ public class StartApp extends Application {
                         text.append("Terrain: ").append(terrain).append("\n");
             text.append("Overlay: ").append(overlay).append("\n");
             text.append("Defence bonus: ").append(game.getCombinedDefenceBonus(position)).append("\n");
-            text.append("Move cost Infantry: ").append(game.getCombinedMovementInfantry(position)).append("\n");
-            text.append("Move cost Vehicle: ").append(game.getCombinedMovementVehicle(position)).append("\n");
+            text.append("Move cost Infantry: ").append(formatMovementCost(game.getCombinedMovementInfantry(position))).append("\n");
+            text.append("Move cost Vehicle: ").append(formatMovementCost(game.getCombinedMovementVehicle(position))).append("\n");
 
             if (unit == null) {
                 text.append("Unit: none");
@@ -245,7 +245,7 @@ public class StartApp extends Application {
         return Math.max(min, Math.min(max, value));
     }
 
-/**
+    /**
      * @brief Update the lower turn label text
      * 
      * @param turnLabel The label to be updated
@@ -253,5 +253,20 @@ public class StartApp extends Application {
      */
     private static void updateTurnLabel(Label turnLabel, Game game) {
         turnLabel.setText("Turn: " + game.getCurrentTurn() + " | Current player: " + game.getCurrentPlayer());
+    }
+
+    /**
+     * @brief Return the movement cost as a readable value
+     * 
+     * @param movement_cost The movement cost to format
+     * 
+     * @return Either the integer cost or INF for impassable terrain
+     */
+    private static String formatMovementCost(int movement_cost) {
+        if (movement_cost == Integer.MAX_VALUE) {
+            return "INF";
+        }
+
+        return Integer.toString(movement_cost);
     }
 }
