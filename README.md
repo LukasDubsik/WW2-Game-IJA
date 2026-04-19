@@ -268,5 +268,7 @@ The project already has a good base now.
 The map, movement, overlays, turns, unit visuals, and animation are all in a workable state.
 What remains are the big “game loop” systems.
 
+If you can somehow find and generate better tiles then I would be very glad. I don't know very much about AI, since I don't use it that much, but when I tried generating assets though ChatGPT it came out suboptimal to what I expected (you will see when you play the game). If you can create better tile assets or even generate better unit assets, I would be very thankful. Even better would be to implement the concept of "asset depending on position". Like when forest is on all sides surrounded by forest tiles it will be as a whole a forest, but if it is in two hexes plain, those two sides wwould transition to plain while the rest of the sides will be all trees. This is easy to do coding wise, but would require to generate that many assets, which I utterly failed with ChatGPT cause he started generating absolute nonsense. 
+
 So the project is **around halfway finished**, but it is also **not in danger of being a nonfunctional skeleton** anymore.
 The remaining work is substantial, but it is concentrated in several clear subsystems rather than being spread chaotically everywhere.
