@@ -39,6 +39,7 @@ public final class GameCanvas extends Canvas {
     private final boolean[][] movement_map; ///< The map of tiles the unit can move to
 
     private final Map<Terrain, Image> terrain_image_cache = new HashMap<>(); ///< Holder of cached terrain images
+    private final Map<Overlay, Image> overlay_image_cache = new HashMap<>(); ///< Holder of cached overlay icons
 
     Position previous_position; ///< The previously selected position
 
@@ -146,24 +147,16 @@ public final class GameCanvas extends Canvas {
                 // Draw either the loaded terrain asset or the fallback color for it
                 drawTerrainTile(gc, terrain, x, y, x_points, y_points);
 
-                // Simple debug rendering of overlay markers
+                // Draw the overlay icon in the corner of the tile
                 if (overlay != Overlay.NONE) {
-                    gc.save();
-                    gc.setFill(Color.color(1.0, 1.0, 1.0, 0.90));
-                    gc.setFont(Font.font(10));
-                    gc.fillText(
-                            overlay.getShortLabel(),
-                            x - getTileX() * 0.12,
-                            y - getTileY() * 0.18
-                    );
-                    gc.restore();
+                    drawOverlayIcon(gc, overlay, x, y);
                 }
 
                 // If this tile is clicked and doesn't contain an unit
                 if (tiles_selected[row][column]) {
                     // Add a blue tint to it
                     gc.save();
-                    gc.setFill(Color.color(0, 0, 1.0, 0.22));
+                    gc.setFill(Color.color(0, 0, 1.0, 0.14));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
@@ -172,7 +165,7 @@ public final class GameCanvas extends Canvas {
                 if (movement_map[row][column]) {
                     // Add a white tint to it
                     gc.save();
-                    gc.setFill(Color.color(0, 0, 1.0, 0.42));
+                    gc.setFill(Color.color(0, 0, 1.0, 0.24));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
@@ -402,6 +395,97 @@ public final class GameCanvas extends Canvas {
             terrain_image_cache.put(terrain, null);
             return null;
         }
+    }
+
+    /**
+     * @brief Draw the overlay icon into the upper-right corner of the tile
+     * 
+     * @param gc The graphics context used for drawing
+     * @param overlay The overlay which should be drawn
+     * @param center_x The x center of the tile
+     * @param center_y The y center of the tile
+     */
+    private void drawOverlayIcon(GraphicsContext gc, Overlay overlay, double center_x, double center_y) {
+        Image overlay_image = loadOverlayImage(overlay);
+
+        // If the image doesn't exist, fall back to the short text marker
+        if (overlay_image == null) {
+            gc.save();
+            gc.setFill(Color.color(1.0, 1.0, 1.0, 0.95));
+            gc.setFont(Font.font(10));
+            gc.fillText(
+                    overlay.getShortLabel(),
+                    center_x + getTileX()*0.18,
+                    center_y - getTileY()*0.18
+            );
+            gc.restore();
+            return;
+        }
+
+        // Size and placement of the icon in the top-right corner
+        double icon_size = Math.min(getTileX(), getTileY()) * 0.30;
+        double icon_x = center_x + getTileX()*0.17 - icon_size/2.0;
+        double icon_y = center_y - getTileY()*0.19 - icon_size/2.0;
+
+        // Draw the transparent overlay icon itself
+        gc.save();
+        gc.drawImage(overlay_image, icon_x, icon_y, icon_size, icon_size);
+        gc.restore();
+    }
+
+    /**
+     * @brief Load the overlay icon into cache, if available on disk
+     * 
+     * @param overlay The overlay type whose icon should be loaded
+     * 
+     * @return The loaded image or null if no valid icon exists yet
+     */
+    private Image loadOverlayImage(Overlay overlay) {
+        // If already known, return the cached value
+        if (overlay_image_cache.containsKey(overlay)) {
+            return overlay_image_cache.get(overlay);
+        }
+
+        File asset_file = new File(overlayAssetPath(overlay));
+
+        // If the asset isn't there yet, remember it and fall back to text rendering
+        if (!asset_file.isFile()) {
+            overlay_image_cache.put(overlay, null);
+            return null;
+        }
+
+        try {
+            Image loaded = new Image(asset_file.toURI().toString(), false);
+
+            if (loaded.isError()) {
+                overlay_image_cache.put(overlay, null);
+                return null;
+            }
+
+            overlay_image_cache.put(overlay, loaded);
+            return loaded;
+        } catch (Exception e) {
+            overlay_image_cache.put(overlay, null);
+            return null;
+        }
+    }
+
+    /**
+     * @brief Return the path of the icon belonging to the overlay type
+     * 
+     * @param overlay The overlay enum value
+     * 
+     * @return The asset path to the correct overlay icon
+     */
+    private String overlayAssetPath(Overlay overlay) {
+        return switch (overlay) {
+            case NONE -> "lib/assets/overlays/none.png";
+            case BARBED_WIRE -> "lib/assets/overlays/barbed_wire.png";
+            case TRENCH -> "lib/assets/overlays/trench.png";
+            case CRATER -> "lib/assets/overlays/crater.png";
+            case RUBBLE -> "lib/assets/overlays/rubble.png";
+            case SNOW_DRIFT -> "lib/assets/overlays/snow_drift.png";
+        };
     }
 
     /**
