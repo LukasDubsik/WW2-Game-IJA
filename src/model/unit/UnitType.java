@@ -5,79 +5,96 @@ import model.map.Terrain;
 public enum UnitType {
     // List of the types and their names and values of the UnitType
     // Goes as:
-    // DISPLAY_NAME, ASSET_PATH, MAX_HP, PRICE, MOVEMENT_TYPE, MOVEMENT, MIN_ATTACK_RANGE, MAX_ATTACK_RANGE
-    // Damage is intentionally not modeled here yet. Weapons can own that later.
+    // DISPLAY_NAME, ASSET_PATH, MAX_HP, PRICE, MOVEMENT_TYPE, MOVEMENT,
+    // MIN_ATTACK_RANGE, MAX_ATTACK_RANGE, SOFT_DAMAGE, HARD_DAMAGE
+    //
+    // NOTE:
+    // These damage values are intentionally provisional and unit-level only.
+    // Later, the full attack model can be moved to weapons and these can either
+    // become defaults, modifiers, or be removed entirely.
 
     WEHRMACHT_RIFLE_SQUAD(
             "Wehrmacht Rifle Squad",
             "lib/assets/units/germany/infantry/base_infantry.png",
-            100, 900, MovementType.INFANTRY, 3, 1, 1
+            100, 900, MovementType.INFANTRY, 3, 1, 1,
+            18, 4
     ),
 
     GRENADIER_SQUAD(
             "Grenadier Squad",
             "lib/assets/units/germany/infantry/grenadiers.png",
-            100, 1100, MovementType.INFANTRY, 3, 1, 1
+            100, 1100, MovementType.INFANTRY, 3, 1, 1,
+            22, 6
     ),
 
     MG42_TEAM(
             "MG 42 Team",
             "lib/assets/units/germany/infantry/mg_team.png",
-            100, 1200, MovementType.INFANTRY, 2, 1, 1
+            100, 1200, MovementType.INFANTRY, 2, 1, 1,
+            30, 3
     ),
 
     SDKFZ_251_HALFTRACK(
             "Sd.Kfz. 251/1 Half-track",
             "lib/assets/units/germany/vehicles/sdkfz_251.png",
-            100, 3200, MovementType.VEHICLE, 6, 1, 1
+            100, 3200, MovementType.VEHICLE, 6, 1, 1,
+            16, 10
     ),
 
     PANZER_IV_AUSF_J(
             "Panzer IV Ausf. J",
             "lib/assets/units/germany/vehicles/panzer_IV_J.png",
-            100, 7000, MovementType.VEHICLE, 5, 1, 1
+            100, 7000, MovementType.VEHICLE, 5, 1, 1,
+            24, 34
     ),
 
     SDKFZ_234_2_PUMA(
             "Sd.Kfz. 234/2 Puma",
             "lib/assets/units/germany/vehicles/puma.png",
-            100, 5200, MovementType.VEHICLE, 8, 1, 1
+            100, 5200, MovementType.VEHICLE, 8, 1, 1,
+            18, 24
     ),
 
     SOVIET_ASSAULT_SAPPER_SQUAD(
             "Soviet Assault Sapper Squad",
             "lib/assets/units/soviets/infantry/assult_infantry.png",
-            100, 1200, MovementType.INFANTRY, 3, 1, 1
+            100, 1200, MovementType.INFANTRY, 3, 1, 1,
+            24, 8
     ),
 
     DP27_TEAM(
             "DP-27 Team",
             "lib/assets/units/soviets/infantry/mg.png",
-            100, 1200, MovementType.INFANTRY, 2, 1, 1
+            100, 1200, MovementType.INFANTRY, 2, 1, 1,
+            28, 3
     ),
 
     ZIS_3_FIELD_GUN(
             "ZiS-3 Field Gun",
             "lib/assets/units/soviets/guns/vehicle_gun.png",
-            100, 3500, MovementType.VEHICLE, 1, 2, 3
+            100, 3500, MovementType.VEHICLE, 2, 2, 3,
+            20, 36
     ),
 
     IS_1_HEAVY_TANK(
             "IS-1 Heavy Tank",
             "lib/assets/units/soviets/vehicles/IS1.png",
-            100, 8000, MovementType.VEHICLE, 5, 1, 1
+            100, 8000, MovementType.VEHICLE, 5, 1, 1,
+            26, 40
     ),
 
     M3_HALFTRACK(
             "M3 Half-track",
             "lib/assets/units/soviets/vehicles/halftrack.png",
-            100, 3600, MovementType.VEHICLE, 7, 1, 1
+            100, 3600, MovementType.VEHICLE, 7, 1, 1,
+            15, 9
     ),
 
     BA_64_ARMORED_CAR(
             "BA-64 Armored Car",
             "lib/assets/units/soviets/vehicles/armored_car.png",
-            100, 4200, MovementType.VEHICLE, 8, 1, 1
+            100, 4200, MovementType.VEHICLE, 8, 1, 1,
+            14, 8
     );
 
     private String name; ///< Units name
@@ -88,13 +105,16 @@ public enum UnitType {
     private int movement; ///< The movement range of the unit
     private int min_attack_range; ///< The minimum attack range
     private int max_attack_range; ///< The maximum attack range
+    private int soft_damage; ///< Provisional base damage against infantry / soft targets
+    private int hard_damage; ///< Provisional base damage against armored / hard targets
 
     /**
      * @brief Constructor of the UnitType enum
      */
     UnitType(String name_, String asset_path_, int max_hp_, int price_,
              MovementType movement_type_, int movement_,
-             int min_attack_range_, int max_attack_range_) {
+             int min_attack_range_, int max_attack_range_,
+             int soft_damage_, int hard_damage_) {
         this.name = name_;
         this.asset_path = asset_path_;
         this.max_hp = max_hp_;
@@ -103,6 +123,8 @@ public enum UnitType {
         this.movement = movement_;
         this.min_attack_range = min_attack_range_;
         this.max_attack_range = max_attack_range_;
+        this.soft_damage = soft_damage_;
+        this.hard_damage = hard_damage_;
     }
 
     /**
@@ -178,6 +200,24 @@ public enum UnitType {
     }
 
     /**
+     * @brief Get provisional damage against soft targets
+     * 
+     * @return Damage against infantry / gun crews
+     */
+    public int getSoftDamage() {
+        return this.soft_damage;
+    }
+
+    /**
+     * @brief Get provisional damage against hard targets
+     * 
+     * @return Damage against armored / vehicle targets
+     */
+    public int getHardDamage() {
+        return this.hard_damage;
+    }
+
+    /**
      * @brief Get the movement cost of the unit for the given terrain type
      * 
      * @param terrain The terrain to analyze the movement for
@@ -188,6 +228,23 @@ public enum UnitType {
         return switch (this.movement_type) {
             case VEHICLE -> terrain.getVehicleMovementCost();
             case INFANTRY -> terrain.getInfantryMovementCost();
+        };
+    }
+
+    /**
+     * @brief Get provisional damage against another unit
+     * 
+     * @param target The target unit type
+     * @return The provisional base damage value
+     */
+    public int getDamageAgainst(UnitType target) {
+        if (target == null) {
+            throw new IllegalArgumentException("Target unit type cannot be null.");
+        }
+
+        return switch (target.getMovementType()) {
+            case INFANTRY -> this.soft_damage;
+            case VEHICLE -> this.hard_damage;
         };
     }
 

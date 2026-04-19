@@ -43,6 +43,7 @@ public final class GameCanvas extends Canvas {
 
     private final Map<Terrain, Image> terrain_image_cache = new HashMap<>(); ///< Holder of cached terrain images
     private final Map<Overlay, Image> overlay_image_cache = new HashMap<>(); ///< Holder of cached overlay icons
+    private final Map<String, Image> unit_image_cache = new HashMap<>(); ///< Holder of cached unit images
 
     Position previous_position; ///< The previously selected position
 
@@ -134,10 +135,28 @@ public final class GameCanvas extends Canvas {
         double x = getHexX(pos.row(), pos.column());
         double y = getHexY(pos.row());
 
-        // Draw the color for the owner
-        gc.setFill(ownerColor(unit.getOwner()));
-        gc.setFont(Font.font(18));
-        gc.fillText(unitLabel(unit), x - getTileX()*0.08, y + getTileY()*0.06);
+        // Attempt to load the actual image asset
+        Image image = loadUnitImage(unit);
+
+        // If the image failed to load, fall back to the text label
+        if (image == null) {
+            gc.setFill(ownerColor(unit.getOwner()));
+            gc.setFont(Font.font(18));
+            gc.fillText(unitLabel(unit), x - getTileX() * 0.08, y + getTileY() * 0.06);
+            return;
+        }
+
+        // Draw the unit image centered on the tile
+        double draw_w = getTileX() * 0.63;
+        double draw_h = getTileY() * 0.63;
+
+        gc.drawImage(
+                image,
+                x - draw_w / 2.0,
+                y - draw_h / 2.0,
+                draw_w,
+                draw_h
+        );
     }
 
     public void setOnTileClicked(Consumer<Position> handler) {
@@ -398,6 +417,47 @@ public final class GameCanvas extends Canvas {
         // Otherwise fall back to color rendering so the game remains functional
         gc.setFill(style.fallback_color());
         gc.fillPolygon(x_points, y_points, 6);
+    }
+
+    /**
+     * @brief Load the image for a unit type from disk
+     * 
+     * @param unit The unit for which to load the image
+     * @return The loaded image, or null if loading failed
+     */
+    private Image loadUnitImage(Unit unit) {
+        String path = unit.getUnitType().getAssetPath();
+
+        // Return cached copy if present
+        Image cached = unit_image_cache.get(path);
+        if (cached != null) {
+            return cached;
+        }
+
+        try {
+            File file = new File(path);
+            if (!file.exists()) {
+                System.err.println("Missing unit asset: " + path);
+                return null;
+            }
+
+            Image image = new Image(file.toURI().toString(), false);
+
+            if (image.isError()) {
+                System.err.println("Failed to load unit asset: " + path);
+                if (image.getException() != null) {
+                    image.getException().printStackTrace();
+                }
+                return null;
+            }
+
+            unit_image_cache.put(path, image);
+            return image;
+        } catch (Exception exception) {
+            System.err.println("Error while loading unit asset: " + path);
+            exception.printStackTrace();
+            return null;
+        }
     }
 
     /**
