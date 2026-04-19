@@ -33,6 +33,9 @@ public class Game {
     private final int columns; ///< Number of ciolumns of the map
 
     private final List<GameObserver> observers = new ArrayList<>();
+
+    private int current_turn = 1; ///< The current turn number
+    private String current_player = "P1"; ///< The currently active player
     
     /**
      * @brief The constructor of the Game class
@@ -207,6 +210,11 @@ public class Game {
             return false;
         }
 
+        // The unit can only be moved during its owner's turn
+        if (!unit.getOwner().equals(this.current_player)) {
+            return false;
+        }
+
         // Can move in the same position -> like artillery
         if (from.equals(to)) {
             notifyObservers(new GameEvent());
@@ -244,6 +252,11 @@ public class Game {
         Unit unit = this.units_map.get(pos);
         if (unit == null) {
             // Return a list of nothing -> No unit, can't go anywhere
+            return List.of();
+        }
+
+        // Only the currently active player can query movement for own units
+        if (!unit.getOwner().equals(this.current_player)) {
             return List.of();
         }
 
@@ -468,6 +481,42 @@ public class Game {
 
     public int getCombinedMovementVehicle(Position pos) {
         return combineMoveCost(getTerrain(pos).getVehicleMovementCost(), getOverlay(pos).getVehicleMovementCost());
+    }
+
+        /**
+     * @brief Get the current turn number
+     * 
+     * @return The currently active turn number
+     */
+    public int getCurrentTurn() {
+        return this.current_turn;
+    }
+
+    /**
+     * @brief Get the currently active player
+     * 
+     * @return The owner string of the active player
+     */
+    public String getCurrentPlayer() {
+        return this.current_player;
+    }
+
+    /**
+     * @brief Shift the game to the next turn
+     */
+    public void nextTurn() {
+        // For now, keep the turn system simple -> only P1 and P2 alternate
+        if (this.current_player.equals("P1")) {
+            this.current_player = "P2";
+        } else {
+            this.current_player = "P1";
+        }
+
+        // Advance the turn counter as well
+        this.current_turn++;
+
+        // Notify the observers that the game changed
+        notifyObservers(new GameEvent());
     }
 
     // Classes for search algorithm
