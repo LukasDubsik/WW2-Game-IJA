@@ -5,10 +5,14 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -49,6 +53,10 @@ public class StartApp extends Application {
         // Experimenting with some base labels
         Label infoLabel = new Label("Click a tile.");
         infoLabel.setWrapText(true); //Make text dynamic
+
+        // Label holding the currently active turn/player
+        Label turnLabel = new Label();
+        updateTurnLabel(turnLabel, game);
         
         // Create the game canvas
         GameCanvas canvas = new GameCanvas(game, 80, 70);
@@ -179,6 +187,39 @@ public class StartApp extends Application {
         // Center teh scroller on teh center of the all
         root.setCenter(scroller);
 
+        // Create a lower control bar for turn handling
+        HBox bottomPanel = new HBox(12);
+        bottomPanel.setPadding(new Insets(12));
+        bottomPanel.setAlignment(Pos.CENTER_LEFT);
+        bottomPanel.setStyle("-fx-background-color: #111111;");
+
+        // Spacer so the button goes to the right corner
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // Button for shifting to the next turn
+        Button nextTurnButton = new Button("Next turn");
+
+        nextTurnButton.setOnAction(event -> {
+            // Move the game to the next turn
+            game.nextTurn();
+
+            // Remove all previous visual movement selections
+            canvas.clearSelections();
+
+            // Update the lower label
+            updateTurnLabel(turnLabel, game);
+
+            // Temporary debugging info
+            infoLabel.setText("Turn: " + game.getCurrentTurn() + "\nCurrent player: " + game.getCurrentPlayer());
+        });
+
+        // Put the controls together
+        bottomPanel.getChildren().addAll(turnLabel, spacer, nextTurnButton);
+
+        // Place the panel at the bottom
+        root.setBottom(bottomPanel);
+
         // Create the scene
         Scene scene = new Scene(root);
 
@@ -202,5 +243,15 @@ public class StartApp extends Application {
      */
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+/**
+     * @brief Update the lower turn label text
+     * 
+     * @param turnLabel The label to be updated
+     * @param game The game from which to read the active turn
+     */
+    private static void updateTurnLabel(Label turnLabel, Game game) {
+        turnLabel.setText("Turn: " + game.getCurrentTurn() + " | Current player: " + game.getCurrentPlayer());
     }
 }
