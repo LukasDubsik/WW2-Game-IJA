@@ -80,13 +80,8 @@ public final class GameCanvas extends Canvas {
             game.moveUnit(previous_position, clicked);
         }
 
-        // Reset all to false when new click occurs
-        for (boolean[] row : tiles_selected) {
-            Arrays.fill(row, false);
-        }
-        for (boolean[] row : movement_map) {
-            Arrays.fill(row, false);
-        }
+        // Reset all selections when new click occurs
+        resetSelections();
 
         if (clicked != null) {
             // Run the event registered for it
@@ -95,8 +90,8 @@ public final class GameCanvas extends Canvas {
             // Based if there is unit on the tile
             Unit unit = game.getUnit(clicked);
 
-            // If there is an unit, set the movement tiles
-            if (unit != null) {
+            // If there is an unit and it belongs to the active player, set movement tiles
+            if (unit != null && Objects.equals(unit.getOwner(), game.getCurrentPlayer())) {
                 List<Position> tiles_possible = game.getReachableTiles(clicked);
 
                 // For each position that is reachable, mark it in the map
@@ -483,5 +478,28 @@ public final class GameCanvas extends Canvas {
     private void updateCanvasSize() {
         setWidth(canvasWidth(game.getColumns(), getTileX()));
         setHeight(canvasHeight(game.getRows(), getTileY()));
+    }
+
+    /**
+     * @brief Reset all current tile highlights/selections
+     */
+    private void resetSelections() {
+        for (boolean[] row : tiles_selected) {
+            Arrays.fill(row, false);
+        }
+
+        for (boolean[] row : movement_map) {
+            Arrays.fill(row, false);
+        }
+
+        previous_position = null;
+    }
+
+    /**
+     * @brief Public helper to clear all selections and redraw the canvas
+     */
+    public void clearSelections() {
+        resetSelections();
+        draw();
     }
 }
