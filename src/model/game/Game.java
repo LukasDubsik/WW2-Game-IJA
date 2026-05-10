@@ -446,6 +446,38 @@ public class Game {
     }
 
     /**
+     * @brief Get all neighboring tiles around the given tile on the hex map
+     * 
+     * @param pos The position whose neighbors we want
+     * @return List of all neighboring tiles
+     */
+    private List<Position> getNeighborTiles(Position pos) {
+        List<Position> neighbors = new ArrayList<>();
+
+        int row = pos.row();
+        int col = pos.column();
+
+        // Even and odd rows are shifted differently in the hex map
+        if (row % 2 == 0) {
+            neighbors.add(new Position(row - 1, col - 1));
+            neighbors.add(new Position(row - 1, col));
+            neighbors.add(new Position(row, col - 1));
+            neighbors.add(new Position(row, col + 1));
+            neighbors.add(new Position(row + 1, col - 1));
+            neighbors.add(new Position(row + 1, col));
+        } else {
+            neighbors.add(new Position(row - 1, col));
+            neighbors.add(new Position(row - 1, col + 1));
+            neighbors.add(new Position(row, col - 1));
+            neighbors.add(new Position(row, col + 1));
+            neighbors.add(new Position(row + 1, col));
+            neighbors.add(new Position(row + 1, col + 1));
+        }
+
+        return neighbors;
+    }
+
+    /**
      * @brief Shift the game to the next turn
      */
     public void nextTurn() {
