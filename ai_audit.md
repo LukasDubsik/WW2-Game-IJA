@@ -8,11 +8,11 @@
 
 Tento soubor byl sestaven v ChatGPT na základě skutečné komunikace nad tímto projektem a následně upraven do podoby vhodné pro odevzdání. Struktura vychází ze vzorového souboru `ai_audit_sample.md`, ale obsah odpovídá reálnému způsobu použití AI v tomto projektu. AI zde nebyla použita jako náhrada samostatné práce ani jako generátor celého řešení, ale především jako pomocný nástroj při tvorbě časově náročných, opakujících se nebo prezentačních částí implementace.
 
-Celkově odhadujeme, že AI se podílela přibližně na **20 % výsledného projektu**, a to včetně části grafických assetů / vizuálních podkladů, pomocných tříd, dílčích UI prvků a některých boilerplate nebo datových částí kódu. **Jádro herní logiky, architektura programu, hlavní návrhová rozhodnutí, integrace mechanik a finální propojení systému byly vytvořeny a dokončeny ručně.**
+Celkově odhadujeme, že AI se podílela přibližně na **25 % výsledného projektu**, a to včetně části grafických assetů / vizuálních podkladů, pomocných tříd, dílčích UI prvků a některých boilerplate nebo datových částí kódu. **Jádro herní logiky, architektura programu, hlavní návrhová rozhodnutí, integrace mechanik a finální propojení systému byly vytvořeny a dokončeny ručně.**
 
 AI byla používána především:
 - pro urychlení tvorby opakujícího se nebo technicky rutinního kódu,
-- pro návrhy částí uživatelského rozhraní, které byly následně ručně přepracovány,
+- pro návrhy částí uživatelského rozhraní, které byly následně ručně upraveny,
 - pro kostry některých podpůrných tříd a enumů,
 - pro pomoc s formulací některých textových a prezentačních částí,
 - pro část grafických assetů nebo podkladů, které byly následně ručně vybírány, upravovány a zasazovány do projektu.
@@ -65,10 +65,10 @@ Naopak bez použití AI byly řešeny zejména:
 ---
 
 ## 4. Grafické assety a vizuální podklady
-* **Nástroj:** AI generativní nástroje / ChatGPT asistence při jejich výběru a použití
+* **Nástroj:** ChatGPT
 * **Datum:** průběžně během vizuálního zpracování projektu
 * **Použití:**
-  AI byla použita při získávání nebo přípravě části grafických assetů, případně jako pomoc při jejich výběru, seskupení nebo zasazení do hry.
+  AI byla použita při získávání nebo přípravě grafických assetů, případně jako pomoc při jejich výběru, seskupení nebo zasazení do hry.
 * **Úprava studentem:**
   Assety byly ručně vybírány, kontrolovány, případně upravovány a integrovány do projektu. Výsledná vizuální podoba mapy a práce s assety v programu byla provedena ručně.
 * **Míra generování:** nelze přesně vyjádřit po řádcích kódu; AI zde sloužila jako podpůrný nástroj pro vizuální část projektu.
@@ -96,17 +96,6 @@ Naopak bez použití AI byly řešeny zejména:
 * **Úprava studentem:**
   Celkový návrh mechanik, jejich pořadí, návaznosti, gameplay význam i finální funkční propojení byly vytvořeny a laděny ručně. AI zde nesloužila jako autor výsledné mechaniky, ale jako pomocník při implementaci jednotlivých částí.
 * **Míra generování:** nízká až střední v jednotlivých blocích, nízká v konečném systému jako celku.
-
----
-
-## 7. Textové a dokumentační části
-* **Nástroj:** ChatGPT
-* **Datum:** průběžně
-* **Použití:**
-  AI byla použita pro formulaci některých textových částí, komentářů, popisů, historických flavor textů a dalších doprovodných nebo prezentačních částí projektu.
-* **Úprava studentem:**
-  Texty byly následně ručně vybírány, přepisovány a přizpůsobovány stylu projektu.
-* **Míra generování:** střední.
 
 ---
 
