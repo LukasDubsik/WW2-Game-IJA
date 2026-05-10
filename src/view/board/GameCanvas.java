@@ -52,6 +52,8 @@ public final class GameCanvas extends Canvas {
     private Position animation_origin = null; ///< The original tile of the animated unit
     private Position animation_draw_position = null; ///< The current tile at which the animated unit is drawn
 
+    private boolean[][] attack_map; ///< Which tiles are currently attackable by the selected unit
+
     /**
      * @brief The constructor of the caanvas
      */
@@ -66,6 +68,8 @@ public final class GameCanvas extends Canvas {
         // Initialized the selected tiles so all are false
         tiles_selected = new boolean[game.getRows()][game.getColumns()];
 
+        attack_map = new boolean[game.getRows()][game.getColumns()];
+
         // Initialized the movement map so all are false
         movement_map = new boolean[game.getRows()][game.getColumns()];
 
@@ -74,7 +78,13 @@ public final class GameCanvas extends Canvas {
         draw();
     }
 
-        public void handleClick(double x, double y) {
+    /**
+     * @brief Handle the click of the mouse on the canvas
+     * 
+     * @param x The x coordinate of the click
+     * @param y The y coordinate of the click
+     */
+    public void handleClick(double x, double y) {
         // Ignore clicks while animation is running
         if (movement_animation_running) {
             return;
@@ -88,29 +98,49 @@ public final class GameCanvas extends Canvas {
             return;
         }
 
+        // If the tile is an attack option, perform the attack
+        if (attack_map[clicked.row()][clicked.column()]) {
+            if (previous_position != null) {
+                game.attackUnit(previous_position, clicked);
+            }
+
+            clearSelections();
+            draw();
+            return;
+        }
+
         // If the tile is one of the movement options, animate movement and stop here
         if (movement_map[clicked.row()][clicked.column()]) {
             animateMovement(previous_position, clicked);
             return;
         }
 
-        // Reset all to false when new click occurs
+        // Reset all selections when a new normal click occurs
         resetSelections();
 
         // Run the event registered for it
         tileClickHandler.accept(clicked);
 
-        // Based if there is unit on the tile
+        // Based on whether there is a unit on the tile
         Unit unit = game.getUnit(clicked);
 
-        // If there is an unit, set the movement tiles
-        if (unit != null) {
-            List<Position> tiles_possible = game.getReachableTiles(clicked);
+        // If there is a unit, and it belongs to the active player, show its legal actions
+        if (unit != null
+                && unit.getOwner().equals(game.getCurrentPlayer())
+                && !unit.hasAlreadyPlayed()) {
 
-            // For each position that is reachable, mark it in the map
+            // Mark all reachable movement tiles
+            List<Position> tiles_possible = game.getReachableTiles(clicked);
             for (Position tile : tiles_possible) {
                 movement_map[tile.row()][tile.column()] = true;
             }
+
+            // Mark all attackable enemy tiles
+            List<Position> attackable_tiles = game.getAttackableTiles(clicked);
+            for (Position tile : attackable_tiles) {
+                attack_map[tile.row()][tile.column()] = true;
+            }
+
         } else {
             // Otherwise normal tile was clicked so register it
             tiles_selected[clicked.row()][clicked.column()] = true;
@@ -213,6 +243,15 @@ public final class GameCanvas extends Canvas {
                     // Add a white tint to it
                     gc.save();
                     gc.setFill(Color.color(0, 0, 1.0, 0.42));
+                    gc.fillPolygon(x_points, y_points, 6);
+                    gc.restore();
+                }
+
+                // If the tile is an attackable enemy tile
+                if (attack_map[row][column]) {
+                    // Add a red tint to it
+                    gc.save();
+                    gc.setFill(Color.color(1.0, 0.0, 0.0, 0.42));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
@@ -717,7 +756,7 @@ public final class GameCanvas extends Canvas {
     }
 
     /**
-     * @brief Reset all current tile highlights/selections
+     * @brief Reset all current tile selections and movement / attack highlights
      */
     private void resetSelections() {
         for (boolean[] row : tiles_selected) {
@@ -725,6 +764,10 @@ public final class GameCanvas extends Canvas {
         }
 
         for (boolean[] row : movement_map) {
+            Arrays.fill(row, false);
+        }
+
+        for (boolean[] row : attack_map) {
             Arrays.fill(row, false);
         }
 
