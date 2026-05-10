@@ -258,6 +258,9 @@ public class Game {
             unit.setAlreadyPlayed(true);
         }
 
+        // Notify that the game state changed
+        notifyObservers(new GameEvent());
+
         return true;
     }
 
@@ -286,11 +289,6 @@ public class Game {
 
         // Check that the unit belongs to the currently active player
         if (!unit.getOwner().equals(this.current_player)) {
-            return List.of();
-        }
-
-        // Check that the unit has not already acted this turn
-        if (unit.hasAlreadyPlayed()) {
             return List.of();
         }
 
@@ -537,32 +535,8 @@ public class Game {
                 continue;
             }
 
-            // Create a list of neighbors then, this node is worth exploring
-            List<Position> neighbors = new ArrayList<>();
-
-            // The rows and columns
-            int row = current_node.pos.row();
-            int col = current_node.pos.column();
-
-            // Decide on teh neighbors based on the row type
-            if (row % 2 == 0) {
-                neighbors.add(new Position(row - 1, col - 1));
-                neighbors.add(new Position(row - 1, col));
-                neighbors.add(new Position(row, col - 1));
-                neighbors.add(new Position(row, col + 1));
-                neighbors.add(new Position(row + 1, col - 1));
-                neighbors.add(new Position(row + 1, col));
-            } else {
-                neighbors.add(new Position(row - 1, col));
-                neighbors.add(new Position(row - 1, col + 1));
-                neighbors.add(new Position(row, col - 1));
-                neighbors.add(new Position(row, col + 1));
-                neighbors.add(new Position(row + 1, col));
-                neighbors.add(new Position(row + 1, col + 1));
-            }
-
             // Analyze each of the neighbors
-            for (Position neigh : neighbors) {
+            for (Position neigh : getNeighborTiles(current_node.pos)) {
                 // Check map bounds
                 if (!isInside(neigh)) {
                     continue;
@@ -866,7 +840,7 @@ public class Game {
             }
 
             // Expand the neighboring tiles
-            for (Position neigh : orthogonalNeighbors(current)) {
+            for (Position neigh : getNeighborTiles(current)) {
                 // Ignore tiles outside the board
                 if (!isInside(neigh)) {
                     continue;
