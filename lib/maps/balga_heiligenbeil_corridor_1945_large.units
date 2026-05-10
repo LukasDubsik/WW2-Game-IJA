@@ -1,0 +1,24 @@
+# owner ; unit type ; row ; column
+
+# P1 - Soviet attacking force pressing the corridor from the west
+P1 ; BA-64 Armored Car ; 8 ; 0
+P1 ; M3 Half-track ; 9 ; 2
+P1 ; IS-1 Heavy Tank ; 10 ; 2
+P1 ; IS-1 Heavy Tank ; 11 ; 0
+P1 ; ZiS-3 Field Gun ; 12 ; 1
+P1 ; DP-27 Team ; 5 ; 1
+P1 ; Soviet Assault Sapper Squad ; 6 ; 3
+P1 ; Soviet Assault Sapper Squad ; 3 ; 3
+P1 ; DP-27 Team ; 9 ; 0
+
+# P2 - German pocket defence oriented toward the coastal withdrawal line
+P2 ; Panzer IV Ausf. J ; 8 ; 24
+P2 ; Panzer IV Ausf. J ; 12 ; 24
+P2 ; Sd.Kfz. 251/1 Half-track ; 7 ; 25
+P2 ; Sd.Kfz. 234/2 Puma ; 5 ; 23
+P2 ; MG 42 Team ; 2 ; 20
+P2 ; Grenadier Squad ; 3 ; 20
+P2 ; Wehrmacht Rifle Squad ; 4 ; 24
+P2 ; Grenadier Squad ; 9 ; 19
+P2 ; MG 42 Team ; 13 ; 24
+P2 ; Wehrmacht Rifle Squad ; 11 ; 23
