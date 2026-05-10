@@ -115,6 +115,21 @@ public final class GameCanvas extends Canvas {
             return;
         }
 
+        // Check whether we clicked the same active unit again -> temporary wait / end action
+        Unit clicked_unit = game.getUnit(clicked);
+        if (clicked_unit != null
+                && previous_position != null
+                && clicked.equals(previous_position)
+                && clicked_unit.getOwner().equals(game.getCurrentPlayer())
+                && clicked_unit.hasMovedThisTurn()
+                && !clicked_unit.hasAlreadyPlayed()) {
+
+            game.finishUnitAction(clicked);
+            clearSelections();
+            draw();
+            return;
+        }
+
         // Reset all selections when a new normal click occurs
         resetSelections();
 
@@ -140,6 +155,9 @@ public final class GameCanvas extends Canvas {
             for (Position tile : attackable_tiles) {
                 attack_map[tile.row()][tile.column()] = true;
             }
+
+            // Keep the unit tile visibly selected
+            tiles_selected[clicked.row()][clicked.column()] = true;
 
         } else {
             // Otherwise normal tile was clicked so register it
@@ -610,6 +628,7 @@ public final class GameCanvas extends Canvas {
         }
 
         timeline.setOnFinished(event -> {
+            // Perform the actual game move
             game.moveUnit(from, to);
 
             movement_animation_running = false;
@@ -617,6 +636,32 @@ public final class GameCanvas extends Canvas {
             animation_origin = null;
             animation_draw_position = null;
 
+            // Reset the old visual state first
+            resetSelections();
+
+            // If the moved unit can still attack, show the attack options immediately
+            Unit moved_unit = game.getUnitAt(to);
+            if (moved_unit != null
+                    && moved_unit.getOwner().equals(game.getCurrentPlayer())
+                    && !moved_unit.hasAlreadyPlayed()) {
+
+                List<Position> attackable_tiles = game.getAttackableTiles(to);
+
+                // If there are attack options, keep the unit selected and show them
+                if (!attackable_tiles.isEmpty()) {
+                    tiles_selected[to.row()][to.column()] = true;
+
+                    for (Position tile : attackable_tiles) {
+                        attack_map[tile.row()][tile.column()] = true;
+                    }
+
+                    previous_position = to;
+                    draw();
+                    return;
+                }
+            }
+
+            // Otherwise simply clear everything and redraw
             clearSelections();
             draw();
         });

@@ -9,7 +9,8 @@ public class Unit {
     private String owner; ///< the owner of the unit
     private Position position; ///< Where the unit is currently located
     private int current_hp; ///< What is the current hp of the unit
-    private boolean already_played; ///< Whether the unit has already used its turn action
+    private boolean already_played; ///< Whether the unit has already fully finished its turn action
+    private boolean moved_this_turn; ///< Whether the unit has already moved in the current turn
 
     /**
      * @brief Constructor of the Unit class. The hp is initialised at maximum.
@@ -24,6 +25,7 @@ public class Unit {
         this.position = position;
         this.current_hp = unitType.getMaxHP();
         this.already_played = false;
+        this.moved_this_turn = false;
     }
 
     // Get the values of the Unit
@@ -74,7 +76,7 @@ public class Unit {
     }
 
     /**
-     * @brief Check whether the unit has already acted this turn
+     * @brief Check whether the unit has already fully acted this turn
      * 
      * @return True if already acted, false otherwise
      */
@@ -83,12 +85,30 @@ public class Unit {
     }
 
     /**
-     * @brief Set whether the unit has already acted this turn
+     * @brief Set whether the unit has already fully acted this turn
      * 
      * @param already_played_ The new value of the played state
      */
     public void setAlreadyPlayed(boolean already_played_) {
         this.already_played = already_played_;
+    }
+
+    /**
+     * @brief Check whether the unit has already moved this turn
+     * 
+     * @return True if the unit already moved, false otherwise
+     */
+    public boolean hasMovedThisTurn() {
+        return moved_this_turn;
+    }
+
+    /**
+     * @brief Set whether the unit has already moved this turn
+     * 
+     * @param moved_this_turn_ The new moved state
+     */
+    public void setMovedThisTurn(boolean moved_this_turn_) {
+        this.moved_this_turn = moved_this_turn_;
     }
 
     /**

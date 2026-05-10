@@ -223,8 +223,13 @@ public class Game {
             return false;
         }
 
-        // Check that the unit has not yet played this turn
+        // Check that the unit has not yet fully played this turn
         if (unit.hasAlreadyPlayed()) {
+            return false;
+        }
+
+        // Check that the unit has not already moved this turn
+        if (unit.hasMovedThisTurn()) {
             return false;
         }
 
@@ -242,10 +247,16 @@ public class Game {
         unit.setPosition(to);
         units_map.put(to, unit);
 
-        // For now, moving the unit consumes its turn action
-        // TODO: Once attack / capture / wait are implemented properly,
-        //       this should happen only after the final chosen action.
-        unit.setAlreadyPlayed(true);
+        // Mark that the unit has moved this turn
+        unit.setMovedThisTurn(true);
+
+        // Check whether the unit can still attack after moving
+        List<Position> attackable_tiles = getAttackableTiles(to);
+
+        // If there are no legal attacks left, finish the action immediately
+        if (attackable_tiles.isEmpty()) {
+            unit.setAlreadyPlayed(true);
+        }
 
         return true;
     }
@@ -260,6 +271,16 @@ public class Game {
         Unit unit = this.units_map.get(pos);
         if (unit == null) {
             // Return a list of nothing -> No unit, can't go anywhere
+            return List.of();
+        }
+
+        // Check that the unit has not already finished its turn
+        if (unit.hasAlreadyPlayed()) {
+            return List.of();
+        }
+
+        // Check that the unit has not already moved this turn
+        if (unit.hasMovedThisTurn()) {
             return List.of();
         }
 
@@ -438,10 +459,10 @@ public class Game {
         // Advance the turn counter
         this.current_turn++;
 
-        // Reset the units of the newly active player
         for (Unit unit : units_map.values()) {
             if (unit.getOwner().equals(this.current_player)) {
                 unit.setAlreadyPlayed(false);
+                unit.setMovedThisTurn(false);
             }
         }
 
@@ -727,6 +748,11 @@ public class Game {
             return List.of();
         }
 
+        // Indirect-fire units cannot attack after moving
+        if (attacker.hasMovedThisTurn() && attacker.getUnitType().getMinAttackRange() > 1) {
+            return List.of();
+        }
+
         // Check that the unit belongs to the current player
         if (!attacker.getOwner().equals(this.current_player)) {
             return List.of();
@@ -961,5 +987,41 @@ public class Game {
         );
 
         return tiles_in_range.contains(target_position);
+    }
+
+        /**
+     * @brief Finish the action of the current unit without attacking
+     * 
+     * @param unit_position The position of the unit
+     * @return True if the unit action was ended, false otherwise
+     */
+    public boolean finishUnitAction(Position unit_position) {
+        // Check that the input position exists
+        if (unit_position == null) {
+            return false;
+        }
+
+        // Check that the unit exists
+        Unit unit = this.units_map.get(unit_position);
+        if (unit == null) {
+            return false;
+        }
+
+        // Check that the unit belongs to the current player
+        if (!unit.getOwner().equals(this.current_player)) {
+            return false;
+        }
+
+        // Check that it has not already fully acted
+        if (unit.hasAlreadyPlayed()) {
+            return false;
+        }
+
+        unit.setAlreadyPlayed(true);
+
+        // TODO: Later add dedicated action-end observer event
+        notifyObservers(new GameEvent());
+
+        return true;
     }
 }
