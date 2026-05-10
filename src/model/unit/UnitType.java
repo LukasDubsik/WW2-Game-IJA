@@ -272,56 +272,7 @@ public enum UnitType {
     }
 
     /**
-     * @brief Compute the total attack against soft targets from all armaments
-     * 
-     * @return The computed aggregate soft attack
-     */
-    public int getComputedSoftAttack() {
-        int attack_sum = 0;
-
-        // Sum the contribution of all armaments
-        for (ArmamentType armament : this.armaments) {
-            attack_sum += armament.getSoftAttack();
-        }
-
-        return attack_sum;
-    }
-
-    /**
-     * @brief Compute the total attack against hard targets from all armaments
-     * 
-     * @return The computed aggregate hard attack
-     */
-    public int getComputedHardAttack() {
-        int attack_sum = 0;
-
-        // Sum the contribution of all armaments
-        for (ArmamentType armament : this.armaments) {
-            attack_sum += armament.getHardAttack();
-        }
-
-        return attack_sum;
-    }
-
-    /**
-     * @brief Compute the total attack against the requested target class from all armaments
-     * 
-     * @param target_class The target class against which to compute the attack
-     * @return The computed aggregate attack
-     */
-    public int getComputedAttackAgainst(TargetClass target_class) {
-        int attack_sum = 0;
-
-        // Sum the contribution of all armaments
-        for (ArmamentType armament : this.armaments) {
-            attack_sum += armament.getAttackAgainst(target_class);
-        }
-
-        return attack_sum;
-    }
-
-    /**
-     * @brief Get movement cost of the unit for the given terrain type
+     * @brief Get the movement cost of the unit for the given terrain type
      * 
      * @param terrain The terrain to analyze the movement for
      * @return The integer cost of the movement
@@ -331,6 +282,111 @@ public enum UnitType {
             case VEHICLE -> terrain.getVehicleMovementCost();
             case INFANTRY -> terrain.getInfantryMovementCost();
         };
+    }
+
+    /**
+     * @brief Compute the total attack against soft targets from all armaments
+     * 
+     * @return The computed aggregate soft attack
+     */
+    public int getComputedSoftAttack() {
+        return getComputedSoftAttackAtDistance(1);
+    }
+
+    /**
+     * @brief Compute the total attack against hard targets from all armaments
+     * 
+     * @return The computed aggregate hard attack
+     */
+    public int getComputedHardAttack() {
+        return getComputedHardAttackAtDistance(1);
+    }
+
+    /**
+     * @brief Compute the total attack against soft targets at the given distance
+     * 
+     * @param distance The attack distance
+     * @return The computed aggregate soft attack
+     */
+    public int getComputedSoftAttackAtDistance(int distance) {
+        return getComputedAttackAtDistance(TargetClass.SOFT, distance);
+    }
+
+    /**
+     * @brief Compute the total attack against hard targets at the given distance
+     * 
+     * @param distance The attack distance
+     * @return The computed aggregate hard attack
+     */
+    public int getComputedHardAttackAtDistance(int distance) {
+        return getComputedAttackAtDistance(TargetClass.HARD, distance);
+    }
+
+    /**
+     * @brief Compute the total attack against the requested target class at the given distance
+     * 
+     * This stage stops summing all armaments blindly.
+     * Only armaments valid for the given distance contribute.
+     * 
+     * @param target_class The target class against which to compute the attack
+     * @param distance The attack distance
+     * @return The computed aggregate attack
+     */
+    public int getComputedAttackAtDistance(TargetClass target_class, int distance) {
+        int attack_sum = 0;
+
+        // Sum only armaments that are valid at the given distance
+        for (ArmamentType armament : this.armaments) {
+            if (!armament.canFireAtDistance(distance)) {
+                continue;
+            }
+
+            attack_sum += armament.getAttackAgainst(target_class);
+        }
+
+        return attack_sum;
+    }
+
+    /**
+     * @brief Compute the direct-fire contribution against the given target class and distance
+     * 
+     * @param target_class The target class
+     * @param distance The attack distance
+     * @return Total direct-fire contribution
+     */
+    public int getDirectFireAttackAtDistance(TargetClass target_class, int distance) {
+        int attack_sum = 0;
+
+        for (ArmamentType armament : this.armaments) {
+            if (!armament.contributesDirectAtDistance(distance)) {
+                continue;
+            }
+
+            attack_sum += armament.getAttackAgainst(target_class);
+        }
+
+        return attack_sum;
+    }
+
+    /**
+     * @brief Compute the indirect-fire contribution against the given target class and distance
+     * 
+     * @param target_class The target class
+     * @param distance The attack distance
+     * @return Total indirect-fire contribution
+     */
+    public int getIndirectFireAttackAtDistance(TargetClass target_class, int distance) {
+        int attack_sum = 0;
+
+        for (ArmamentType armament : this.armaments) {
+            if (!armament.contributesIndirectAtDistance(distance)) {
+                continue;
+            }
+
+            attack_sum += armament.getAttackAgainst(target_class);
+        }
+
+        return attack_sum;
     }
 
     /**
@@ -353,23 +409,46 @@ public enum UnitType {
     }
 
     /**
-     * @brief Get computed aggregate damage against another unit from armaments
+     * @brief Get computed aggregate damage against another unit from armaments at the given distance
      * 
-     * This is the new armament-based total, but it is not yet wired into the real combat
-     * resolution logic in this stage.
+     * This is the new armament-based total, but it is still not yet wired into the
+     * real combat resolution logic in this stage.
      * 
      * @param target The target unit type
+     * @param distance The attack distance
      * @return The computed armament-based damage value
      */
-    public int getComputedDamageAgainst(UnitType target) {
+    public int getComputedDamageAgainst(UnitType target, int distance) {
         if (target == null) {
             throw new IllegalArgumentException("Target unit type cannot be null.");
         }
 
         return switch (target.getMovementType()) {
-            case INFANTRY -> getComputedSoftAttack();
-            case VEHICLE -> getComputedHardAttack();
+            case INFANTRY -> getComputedSoftAttackAtDistance(distance);
+            case VEHICLE -> getComputedHardAttackAtDistance(distance);
         };
+    }
+
+    /**
+     * @brief Check whether the unit type has any valid direct-fire contribution at the distance
+     * 
+     * @param distance The attack distance
+     * @return True if any direct-fire armament contributes
+     */
+    public boolean hasDirectFireAtDistance(int distance) {
+        return getDirectFireAttackAtDistance(TargetClass.SOFT, distance) > 0
+                || getDirectFireAttackAtDistance(TargetClass.HARD, distance) > 0;
+    }
+
+    /**
+     * @brief Check whether the unit type has any valid indirect-fire contribution at the distance
+     * 
+     * @param distance The attack distance
+     * @return True if any indirect-fire armament contributes
+     */
+    public boolean hasIndirectFireAtDistance(int distance) {
+        return getIndirectFireAttackAtDistance(TargetClass.SOFT, distance) > 0
+                || getIndirectFireAttackAtDistance(TargetClass.HARD, distance) > 0;
     }
 
     /**

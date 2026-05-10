@@ -5,8 +5,8 @@ import java.util.EnumSet;
 /**
  * @brief Static definition of all supported armament types
  * 
- * This is still only the data model stage.
- * The combat system is not yet using these values.
+ * This stage adds helper methods for evaluating whether the armament can
+ * contribute at a given distance and whether it is direct or indirect fire.
  */
 public enum ArmamentType {
     // German armaments
@@ -212,5 +212,35 @@ public enum ArmamentType {
             case SOFT -> this.soft_attack;
             case HARD -> this.hard_attack;
         };
+    }
+
+    /**
+     * @brief Check whether the armament may fire at the given distance
+     * 
+     * @param distance The attack distance
+     * @return True if the distance lies inside the weapon interval
+     */
+    public boolean canFireAtDistance(int distance) {
+        return distance >= this.min_range && distance <= this.max_range;
+    }
+
+    /**
+     * @brief Check whether the armament contributes as direct fire at the distance
+     * 
+     * @param distance The attack distance
+     * @return True if it is a valid direct-fire contribution
+     */
+    public boolean contributesDirectAtDistance(int distance) {
+        return isDirectFire() && canFireAtDistance(distance);
+    }
+
+    /**
+     * @brief Check whether the armament contributes as indirect fire at the distance
+     * 
+     * @param distance The attack distance
+     * @return True if it is a valid indirect-fire contribution
+     */
+    public boolean contributesIndirectAtDistance(int distance) {
+        return isIndirectFire() && canFireAtDistance(distance);
     }
 }
