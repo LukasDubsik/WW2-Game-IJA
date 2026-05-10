@@ -110,4 +110,4 @@ AI byla v tomto projektu použita především jako **akcelerátor rutinní prá
 
 Naopak klíčové části práce — tedy **architektura, návrh hry, propojení mechanik, rozhodnutí o historickém rámci, mapách, jednotkách, zbraních, balancu a finální integraci systému** — byly vytvořeny ručně.
 
-**Celkový kvalifikovaný odhad podílu AI na výsledném projektu je přibližně 20 %.**
+**Celkový kvalifikovaný odhad podílu AI na výsledném projektu je přibližně 25%.**
