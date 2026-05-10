@@ -147,8 +147,8 @@ public enum UnitType {
     private int movement; ///< The movement range of the unit
     private int min_attack_range; ///< The minimum attack range
     private int max_attack_range; ///< The maximum attack range
-    private int soft_damage; ///< Provisional base damage against infantry / soft targets
-    private int hard_damage; ///< Provisional base damage against armored / hard targets
+    private int soft_damage; ///< Provisional baked base damage against soft targets
+    private int hard_damage; ///< Provisional baked base damage against hard targets
     private List<ArmamentType> armaments; ///< List of armaments carried by the unit type
 
     /**
@@ -245,7 +245,7 @@ public enum UnitType {
     }
 
     /**
-     * @brief Get provisional damage against soft targets
+     * @brief Get provisional baked damage against soft targets
      * 
      * @return Damage against infantry / gun crews
      */
@@ -254,7 +254,7 @@ public enum UnitType {
     }
 
     /**
-     * @brief Get provisional damage against hard targets
+     * @brief Get provisional baked damage against hard targets
      * 
      * @return Damage against armored / vehicle targets
      */
@@ -272,10 +272,58 @@ public enum UnitType {
     }
 
     /**
-     * @brief Get the movement cost of the unit for the given terrain type
+     * @brief Compute the total attack against soft targets from all armaments
+     * 
+     * @return The computed aggregate soft attack
+     */
+    public int getComputedSoftAttack() {
+        int attack_sum = 0;
+
+        // Sum the contribution of all armaments
+        for (ArmamentType armament : this.armaments) {
+            attack_sum += armament.getSoftAttack();
+        }
+
+        return attack_sum;
+    }
+
+    /**
+     * @brief Compute the total attack against hard targets from all armaments
+     * 
+     * @return The computed aggregate hard attack
+     */
+    public int getComputedHardAttack() {
+        int attack_sum = 0;
+
+        // Sum the contribution of all armaments
+        for (ArmamentType armament : this.armaments) {
+            attack_sum += armament.getHardAttack();
+        }
+
+        return attack_sum;
+    }
+
+    /**
+     * @brief Compute the total attack against the requested target class from all armaments
+     * 
+     * @param target_class The target class against which to compute the attack
+     * @return The computed aggregate attack
+     */
+    public int getComputedAttackAgainst(TargetClass target_class) {
+        int attack_sum = 0;
+
+        // Sum the contribution of all armaments
+        for (ArmamentType armament : this.armaments) {
+            attack_sum += armament.getAttackAgainst(target_class);
+        }
+
+        return attack_sum;
+    }
+
+    /**
+     * @brief Get movement cost of the unit for the given terrain type
      * 
      * @param terrain The terrain to analyze the movement for
-     * 
      * @return The integer cost of the movement
      */
     public int getMovementCost(Terrain terrain) {
@@ -286,10 +334,12 @@ public enum UnitType {
     }
 
     /**
-     * @brief Get provisional damage against another unit
+     * @brief Get provisional baked damage against another unit
+     * 
+     * This is still the old system and is intentionally left in place for this stage.
      * 
      * @param target The target unit type
-     * @return The provisional base damage value
+     * @return The provisional baked base damage value
      */
     public int getDamageAgainst(UnitType target) {
         if (target == null) {
@@ -299,6 +349,26 @@ public enum UnitType {
         return switch (target.getMovementType()) {
             case INFANTRY -> this.soft_damage;
             case VEHICLE -> this.hard_damage;
+        };
+    }
+
+    /**
+     * @brief Get computed aggregate damage against another unit from armaments
+     * 
+     * This is the new armament-based total, but it is not yet wired into the real combat
+     * resolution logic in this stage.
+     * 
+     * @param target The target unit type
+     * @return The computed armament-based damage value
+     */
+    public int getComputedDamageAgainst(UnitType target) {
+        if (target == null) {
+            throw new IllegalArgumentException("Target unit type cannot be null.");
+        }
+
+        return switch (target.getMovementType()) {
+            case INFANTRY -> getComputedSoftAttack();
+            case VEHICLE -> getComputedHardAttack();
         };
     }
 
