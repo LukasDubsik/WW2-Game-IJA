@@ -121,7 +121,6 @@ public final class GameCanvas extends Canvas {
                 && previous_position != null
                 && clicked.equals(previous_position)
                 && clicked_unit.getOwner().equals(game.getCurrentPlayer())
-                && clicked_unit.hasMovedThisTurn()
                 && !clicked_unit.hasAlreadyPlayed()) {
 
             game.finishUnitAction(clicked);
@@ -628,8 +627,19 @@ public final class GameCanvas extends Canvas {
         }
 
         timeline.setOnFinished(event -> {
-            // Perform the actual game move
-            game.moveUnit(from, to);
+            boolean moved_ok = game.moveUnit(from, to);
+
+            // If the logical move failed for any reason, just reset the UI safely
+            if (!moved_ok) {
+                movement_animation_running = false;
+                animated_unit = null;
+                animation_origin = null;
+                animation_draw_position = null;
+
+                clearSelections();
+                draw();
+                return;
+            }
 
             movement_animation_running = false;
             animated_unit = null;
