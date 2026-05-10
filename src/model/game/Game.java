@@ -15,6 +15,7 @@ import java.util.Set;
 import model.map.Overlay;
 import model.map.Position;
 import model.map.Terrain;
+import model.unit.TargetClass;
 import model.unit.Unit;
 import model.unit.UnitType;
 
@@ -902,7 +903,7 @@ public class Game {
 
         // Deal the main attack damage
         int defender_hp_before = defender.getCurrentHp();
-        int attack_damage = computeAttackDamage(attacker, target_position);
+        int attack_damage = computeAttackDamage(attacker, attacker_position, target_position);
         defender.takeDamage(attack_damage);
 
         System.out.println(
@@ -930,7 +931,7 @@ public class Game {
         // Counterattack ignores whose turn it is, but still obeys range rules
         if (isTileAttackableByRange(target_position, attacker_position)) {
             int attacker_hp_before = attacker.getCurrentHp();
-            int counter_damage = computeAttackDamage(defender, attacker_position);
+            int counter_damage = computeAttackDamage(defender, target_position, attacker_position);  
             attacker.takeDamage(counter_damage);
 
             System.out.println(
@@ -963,18 +964,28 @@ public class Game {
      * @brief Compute the combat damage done by the attacker onto the defender tile
      * 
      * @param attacker The attacking unit
+     * @param attacker_position The position of the attacker
      * @param defender_position The position of the defender
      * @return The final damage after defence reduction
      */
-    private int computeAttackDamage(Unit attacker, Position defender_position) {
+    private int computeAttackDamage(Unit attacker, Position attacker_position, Position defender_position) {
         // Get the unit that is being attacked
         Unit defender = this.units_map.get(defender_position);
         if (defender == null) {
             return 0;
         }
 
-        // Get the base provisional damage from the unit type
-        int base_damage = attacker.getUnitType().getDamageAgainst(defender.getUnitType());
+        // Compute the geometric attack distance
+        int distance = getTileDistance(attacker_position, defender_position);
+        if (distance == Integer.MAX_VALUE) {
+            return 0;
+        }
+
+        // Determine the broad target class
+        TargetClass target_class = getTargetClass(defender.getUnitType());
+
+        // Get the computed armament-based attack value
+        int base_damage = attacker.getUnitType().getComputedDamageAgainst(defender.getUnitType(), distance);
 
         // Reduce the damage by the tile defence
         int defence_bonus = getCombinedDefenceBonus(defender_position);
@@ -1046,5 +1057,83 @@ public class Game {
         notifyObservers(new GameEvent());
 
         return true;
+    }
+
+    /**
+     * @brief Compute the graph-distance between two tiles on the hex map
+     * 
+     * This uses the same neighbor model as movement and attack range.
+     * Terrain cost and occupancy are ignored here, because this is only geometric
+     * attack distance, not pathfinding cost.
+     * 
+     * @param from Starting tile
+     * @param to Target tile
+     * @return The graph-distance between the tiles, or Integer.MAX_VALUE if unreachable
+     */
+    private int getTileDistance(Position from, Position to) {
+        // Basic null protection
+        if (from == null || to == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        // Same tile means zero distance
+        if (from.equals(to)) {
+            return 0;
+        }
+
+        // BFS state
+        Map<Position, Integer> distance = new HashMap<>();
+        ArrayDeque<Position> queue = new ArrayDeque<>();
+
+        distance.put(from, 0);
+        queue.addLast(from);
+
+        while (!queue.isEmpty()) {
+            Position current = queue.removeFirst();
+            int current_distance = distance.get(current);
+
+            // Expand all valid hex neighbors
+            for (Position neigh : getNeighborTiles(current)) {
+                // Ignore tiles outside the board
+                if (!isInside(neigh)) {
+                    continue;
+                }
+
+                // Ignore already visited tiles
+                if (distance.containsKey(neigh)) {
+                    continue;
+                }
+
+                int next_distance = current_distance + 1;
+                distance.put(neigh, next_distance);
+
+                // If we reached the target, return immediately
+                if (neigh.equals(to)) {
+                    return next_distance;
+                }
+
+                queue.addLast(neigh);
+            }
+        }
+
+        // In a connected board this should normally not happen
+        return Integer.MAX_VALUE;
+    }
+
+    /**
+     * @brief Convert the target unit type into the broad target class
+     * 
+     * @param unit_type The target unit type
+     * @return SOFT for infantry, HARD for vehicles
+     */
+    private TargetClass getTargetClass(UnitType unit_type) {
+        if (unit_type == null) {
+            throw new IllegalArgumentException("Target unit type cannot be null.");
+        }
+
+        return switch (unit_type.getMovementType()) {
+            case INFANTRY -> TargetClass.SOFT;
+            case VEHICLE -> TargetClass.HARD;
+        };
     }
 }
