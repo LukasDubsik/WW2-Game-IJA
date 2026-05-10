@@ -1,100 +1,142 @@
 package model.unit;
 
+import java.util.List;
+
 import model.map.Terrain;
 
 public enum UnitType {
     // List of the types and their names and values of the UnitType
     // Goes as:
     // DISPLAY_NAME, ASSET_PATH, MAX_HP, PRICE, MOVEMENT_TYPE, MOVEMENT,
-    // MIN_ATTACK_RANGE, MAX_ATTACK_RANGE, SOFT_DAMAGE, HARD_DAMAGE
-    //
-    // NOTE:
-    // These damage values are intentionally provisional and unit-level only.
-    // Later, the full attack model can be moved to weapons and these can either
-    // become defaults, modifiers, or be removed entirely.
+    // MIN_ATTACK_RANGE, MAX_ATTACK_RANGE, SOFT_DAMAGE, HARD_DAMAGE, ARMAMENTS
 
     WEHRMACHT_RIFLE_SQUAD(
             "Wehrmacht Rifle Squad",
             "lib/assets/units/germany/infantry/base_infantry.png",
             100, 900, MovementType.INFANTRY, 3, 1, 1,
-            18, 4
+            18, 4,
+            List.of(
+                    ArmamentType.RIFLES,
+                    ArmamentType.GRENADES
+            )
     ),
 
     GRENADIER_SQUAD(
             "Grenadier Squad",
             "lib/assets/units/germany/infantry/grenadiers.png",
             100, 1100, MovementType.INFANTRY, 3, 1, 1,
-            22, 6
+            22, 6,
+            List.of(
+                    ArmamentType.RIFLES,
+                    ArmamentType.GRENADES
+            )
     ),
 
     MG42_TEAM(
             "MG 42 Team",
             "lib/assets/units/germany/infantry/mg_team.png",
             100, 1200, MovementType.INFANTRY, 2, 1, 1,
-            30, 3
+            30, 3,
+            List.of(
+                    ArmamentType.MG42,
+                    ArmamentType.RIFLES
+            )
     ),
 
     SDKFZ_251_HALFTRACK(
             "Sd.Kfz. 251/1 Half-track",
             "lib/assets/units/germany/vehicles/sdkfz_251.png",
             100, 3200, MovementType.VEHICLE, 6, 1, 1,
-            16, 10
+            16, 10,
+            List.of(
+                    ArmamentType.VEHICLE_MG_GERMAN
+            )
     ),
 
     PANZER_IV_AUSF_J(
             "Panzer IV Ausf. J",
             "lib/assets/units/germany/vehicles/panzer_IV_J.png",
             100, 7000, MovementType.VEHICLE, 5, 1, 1,
-            24, 34
+            24, 34,
+            List.of(
+                    ArmamentType.KWK_40_L48_75MM,
+                    ArmamentType.VEHICLE_MG_GERMAN,
+                    ArmamentType.VEHICLE_MG_GERMAN
+            )
     ),
 
     SDKFZ_234_2_PUMA(
             "Sd.Kfz. 234/2 Puma",
             "lib/assets/units/germany/vehicles/puma.png",
             100, 5200, MovementType.VEHICLE, 8, 1, 1,
-            18, 24
+            18, 24,
+            List.of(
+                    ArmamentType.KWK_39_L60_50MM,
+                    ArmamentType.VEHICLE_MG_GERMAN
+            )
     ),
 
     SOVIET_ASSAULT_SAPPER_SQUAD(
             "Soviet Assault Sapper Squad",
             "lib/assets/units/soviets/infantry/assult_infantry.png",
             100, 1200, MovementType.INFANTRY, 3, 1, 1,
-            24, 8
+            24, 8,
+            List.of(
+                    ArmamentType.PPSh41_SMGS,
+                    ArmamentType.GRENADES
+            )
     ),
 
     DP27_TEAM(
             "DP-27 Team",
             "lib/assets/units/soviets/infantry/mg.png",
             100, 1200, MovementType.INFANTRY, 2, 1, 1,
-            28, 3
+            28, 3,
+            List.of(
+                    ArmamentType.DP27,
+                    ArmamentType.RIFLES
+            )
     ),
 
     ZIS_3_FIELD_GUN(
             "ZiS-3 Field Gun",
             "lib/assets/units/soviets/guns/vehicle_gun.png",
             100, 3500, MovementType.VEHICLE, 2, 2, 3,
-            20, 36
+            20, 36,
+            List.of(
+                    ArmamentType.ZIS3_76MM
+            )
     ),
 
     IS_1_HEAVY_TANK(
             "IS-1 Heavy Tank",
             "lib/assets/units/soviets/vehicles/IS1.png",
             100, 8000, MovementType.VEHICLE, 5, 1, 1,
-            26, 40
+            26, 40,
+            List.of(
+                    ArmamentType.D25T_85MM,
+                    ArmamentType.VEHICLE_MG_SOVIET
+            )
     ),
 
     M3_HALFTRACK(
             "M3 Half-track",
             "lib/assets/units/soviets/vehicles/halftrack.png",
             100, 3600, MovementType.VEHICLE, 7, 1, 1,
-            15, 9
+            15, 9,
+            List.of(
+                    ArmamentType.VEHICLE_MG_SOVIET
+            )
     ),
 
     BA_64_ARMORED_CAR(
             "BA-64 Armored Car",
             "lib/assets/units/soviets/vehicles/armored_car.png",
             100, 4200, MovementType.VEHICLE, 8, 1, 1,
-            14, 8
+            14, 8,
+            List.of(
+                    ArmamentType.VEHICLE_MG_SOVIET
+            )
     );
 
     private String name; ///< Units name
@@ -107,6 +149,7 @@ public enum UnitType {
     private int max_attack_range; ///< The maximum attack range
     private int soft_damage; ///< Provisional base damage against infantry / soft targets
     private int hard_damage; ///< Provisional base damage against armored / hard targets
+    private List<ArmamentType> armaments; ///< List of armaments carried by the unit type
 
     /**
      * @brief Constructor of the UnitType enum
@@ -114,7 +157,8 @@ public enum UnitType {
     UnitType(String name_, String asset_path_, int max_hp_, int price_,
              MovementType movement_type_, int movement_,
              int min_attack_range_, int max_attack_range_,
-             int soft_damage_, int hard_damage_) {
+             int soft_damage_, int hard_damage_,
+             List<ArmamentType> armaments_) {
         this.name = name_;
         this.asset_path = asset_path_;
         this.max_hp = max_hp_;
@@ -125,6 +169,7 @@ public enum UnitType {
         this.max_attack_range = max_attack_range_;
         this.soft_damage = soft_damage_;
         this.hard_damage = hard_damage_;
+        this.armaments = List.copyOf(armaments_);
     }
 
     /**
@@ -215,6 +260,15 @@ public enum UnitType {
      */
     public int getHardDamage() {
         return this.hard_damage;
+    }
+
+    /**
+     * @brief Get the list of armaments carried by the unit type
+     * 
+     * @return The armament list
+     */
+    public List<ArmamentType> getArmaments() {
+        return this.armaments;
     }
 
     /**
