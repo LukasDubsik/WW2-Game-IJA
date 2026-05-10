@@ -826,4 +826,66 @@ public class Game {
 
         return tiles_in_range;
     }
+
+        /**
+     * @brief Perform an attack from one unit onto another unit
+     * 
+     * @param attacker_position The position of the attacking unit
+     * @param target_position The position of the attacked unit
+     * @return True if the attack was valid and performed, false otherwise
+     */
+    public boolean attackUnit(Position attacker_position, Position target_position) {
+        // Check that neither of the positions is null
+        if (attacker_position == null || target_position == null) {
+            return false;
+        }
+
+        // Check that the attacking unit even exists
+        Unit attacker = this.units_map.get(attacker_position);
+        if (attacker == null) {
+            return false;
+        }
+
+        // Check that the attacker belongs to the current player
+        if (!attacker.getOwner().equals(this.current_player)) {
+            return false;
+        }
+
+        // Check that the attacker has not already finished its action this turn
+        if (attacker.hasAlreadyPlayed()) {
+            return false;
+        }
+
+        // Check that the target is one of the legal attackable tiles
+        List<Position> attackable_tiles = getAttackableTiles(attacker_position);
+        if (!attackable_tiles.contains(target_position)) {
+            return false;
+        }
+
+        // Get the defender
+        Unit defender = this.units_map.get(target_position);
+        if (defender == null) {
+            return false;
+        }
+
+        // Compute the provisional base damage
+        int damage = attacker.getUnitType().getDamageAgainst(defender.getUnitType());
+
+        // Apply the damage to the defender
+        defender.takeDamage(damage);
+
+        // If the defender has been destroyed, remove it from the map
+        if (defender.isDestroyed()) {
+            this.units_map.remove(target_position);
+        }
+
+        // Mark the attacking unit as already played
+        attacker.setAlreadyPlayed(true);
+
+        // TODO: Later add a dedicated attack event once the observer/game event
+        //       structure for combat is expanded
+        notifyObservers(new GameEvent());
+
+        return true;
+    }
 }
