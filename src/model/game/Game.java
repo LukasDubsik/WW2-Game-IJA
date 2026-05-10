@@ -901,8 +901,16 @@ public class Game {
         }
 
         // Deal the main attack damage
+        int defender_hp_before = defender.getCurrentHp();
         int attack_damage = computeAttackDamage(attacker, target_position);
         defender.takeDamage(attack_damage);
+
+        System.out.println(
+                "[COMBAT] " + attacker.getUnitType().getName()
+                + " attacks " + defender.getUnitType().getName()
+                + " for " + attack_damage
+                + " damage (" + defender_hp_before + " -> " + defender.getCurrentHp() + ")"
+        );
 
         // If the defender has been destroyed, remove it and finish immediately
         if (defender.isDestroyed()) {
@@ -921,11 +929,20 @@ public class Game {
         // If the defender survived, check whether it can counterattack
         // Counterattack ignores whose turn it is, but still obeys range rules
         if (isTileAttackableByRange(target_position, attacker_position)) {
+            int attacker_hp_before = attacker.getCurrentHp();
             int counter_damage = computeAttackDamage(defender, attacker_position);
             attacker.takeDamage(counter_damage);
 
+            System.out.println(
+                    "[COMBAT] " + defender.getUnitType().getName()
+                    + " counterattacks " + attacker.getUnitType().getName()
+                    + " for " + counter_damage
+                    + " damage (" + attacker_hp_before + " -> " + attacker.getCurrentHp() + ")"
+            );
+
             // Remove the attacker if it got destroyed by the counterattack
             if (attacker.isDestroyed()) {
+                System.out.println("[COMBAT] " + attacker.getUnitType().getName() + " destroyed.");
                 this.units_map.remove(attacker_position);
             }
         }

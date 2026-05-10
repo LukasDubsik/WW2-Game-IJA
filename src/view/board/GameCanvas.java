@@ -190,20 +190,60 @@ public final class GameCanvas extends Canvas {
             gc.setFill(ownerColor(unit.getOwner()));
             gc.setFont(Font.font(18));
             gc.fillText(unitLabel(unit), x - getTileX() * 0.08, y + getTileY() * 0.06);
-            return;
+        } else {
+            // Draw the unit image centered on the tile
+            double draw_w = getTileX() * 0.63;
+            double draw_h = getTileY() * 0.63;
+
+            gc.drawImage(
+                    image,
+                    x - draw_w / 2.0,
+                    y - draw_h / 2.0,
+                    draw_w,
+                    draw_h
+            );
         }
 
-        // Draw the unit image centered on the tile
-        double draw_w = getTileX() * 0.63;
-        double draw_h = getTileY() * 0.63;
+        // Draw the hp bar background
+        double hp_bar_w = getTileX() * 0.42;
+        double hp_bar_h = getTileY() * 0.08;
+        double hp_bar_x = x - hp_bar_w / 2.0;
+        double hp_bar_y = y + getTileY() * 0.22;
 
-        gc.drawImage(
-                image,
-                x - draw_w / 2.0,
-                y - draw_h / 2.0,
-                draw_w,
-                draw_h
+        gc.save();
+
+        gc.setFill(Color.color(0.0, 0.0, 0.0, 0.78));
+        gc.fillRect(hp_bar_x, hp_bar_y, hp_bar_w, hp_bar_h);
+
+        // Draw the hp fill
+        double hp_ratio = (double) unit.getCurrentHp() / unit.getUnitType().getMaxHP();
+        double hp_fill_w = hp_bar_w * hp_ratio;
+
+        // Green -> yellow -> red feeling by rough thresholds
+        if (hp_ratio > 0.66) {
+            gc.setFill(Color.LIMEGREEN);
+        } else if (hp_ratio > 0.33) {
+            gc.setFill(Color.GOLD);
+        } else {
+            gc.setFill(Color.RED);
+        }
+
+        gc.fillRect(hp_bar_x, hp_bar_y, hp_fill_w, hp_bar_h);
+
+        // Border around the hp bar
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(hp_bar_x, hp_bar_y, hp_bar_w, hp_bar_h);
+
+        // Draw hp number
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font(10));
+        gc.fillText(
+                Integer.toString(unit.getCurrentHp()),
+                x - getTileX() * 0.07,
+                hp_bar_y - getTileY() * 0.02
         );
+
+        gc.restore();
     }
 
     public void setOnTileClicked(Consumer<Position> handler) {
