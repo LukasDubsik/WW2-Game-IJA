@@ -541,57 +541,48 @@ public final class GameCanvas extends Canvas {
      * @param to Target position
      */
     private void animateMovement(Position from, Position to) {
-        // Ask the game for the exact movement path
         List<Position> path = game.getMovementPath(from, to);
-        if (path.isEmpty()) {
+        if (path == null || path.isEmpty()) {
             return;
         }
 
-        // Get the unit to animate
         Unit unit = game.getUnitAt(from);
         if (unit == null) {
             return;
         }
 
-        // Prepare animation state
         movement_animation_running = true;
         animated_unit = unit;
         animation_origin = from;
         animation_draw_position = from;
 
-        // Create the timeline
         Timeline timeline = new Timeline();
 
-        // Add one frame per path tile
-        for (int i = 0; i < path.size(); i++) {
+        // Start at 1 so there is no artificial pause on the original tile
+        for (int i = 1; i < path.size(); i++) {
             Position step = path.get(i);
 
             timeline.getKeyFrames().add(
-                new KeyFrame(Duration.millis(120 * i), event -> {
+                new KeyFrame(Duration.millis(85 * i), event -> {
                     animation_draw_position = step;
                     draw();
                 })
             );
         }
 
-        // Once animation finishes, perform the real move in the game state
         timeline.setOnFinished(event -> {
+            game.moveUnit(from, to);
+
             movement_animation_running = false;
             animated_unit = null;
             animation_origin = null;
             animation_draw_position = null;
 
-            // Perform the final logical move
-            game.moveUnit(from, to);
-
-            // Clear visual selections after moving
             clearSelections();
-
-            // Redraw final state
             draw();
         });
 
-        timeline.play();
+        timeline.playFromStart();
     }
 
     /**

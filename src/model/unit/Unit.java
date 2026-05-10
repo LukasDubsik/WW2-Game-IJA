@@ -16,7 +16,7 @@ public class Unit {
      * 
      * @param unitType The type of the unit
      * @param owner The owner of the unit
-     * @param position Where the unt is located on the game map
+     * @param position Where the unit is located on the game map
      */
     public Unit(UnitType unitType, String owner, Position position) {
         this.unitType = unitType;
@@ -26,7 +26,7 @@ public class Unit {
         this.already_played = false;
     }
 
-    // Get teh values of the Unit
+    // Get the values of the Unit
 
     /**
      * @brief Get the unit's type
@@ -56,21 +56,21 @@ public class Unit {
     }
 
     /**
+     * @brief Change the current position of the unit
+     * 
+     * @param position_ The new position of the unit
+     */
+    public void setPosition(Position position_) {
+        this.position = position_;
+    }
+
+    /**
      * @brief Get the unit's current HP
      * 
      * @return The unit's current HP
      */
     public int getCurrentHp() {
         return current_hp;
-    }
-
-    /**
-     * @brief Set the new unit's position
-     * 
-     * @param pos The position to change to
-     */
-    public void setPosition(Position pos) {
-        this.position = pos;
     }
 
     /**
@@ -89,6 +89,51 @@ public class Unit {
      */
     public void setAlreadyPlayed(boolean already_played_) {
         this.already_played = already_played_;
+    }
+
+    /**
+     * @brief Deal damage to the unit
+     * 
+     * @param damage_ The amount of damage to be applied
+     */
+    public void takeDamage(int damage_) {
+        // Negative damage makes no sense here
+        if (damage_ < 0) {
+            throw new IllegalArgumentException("Damage cannot be negative.");
+        }
+
+        // Subtract the damage from the current hp
+        this.current_hp -= damage_;
+
+        // Prevent hp from going below zero
+        if (this.current_hp < 0) {
+            this.current_hp = 0;
+        }
+    }
+
+    /**
+     * @brief Check whether the unit has been destroyed
+     * 
+     * @return True if the unit has zero hp, false otherwise
+     */
+    public boolean isDestroyed() {
+        return this.current_hp <= 0;
+    }
+
+    /**
+     * @brief Set the current hp directly
+     * 
+     * @param hp_ The new hp value
+     */
+    public void setCurrentHp(int hp_) {
+        // Clamp the hp to the valid interval
+        if (hp_ < 0) {
+            this.current_hp = 0;
+        } else if (hp_ > this.unitType.getMaxHP()) {
+            this.current_hp = this.unitType.getMaxHP();
+        } else {
+            this.current_hp = hp_;
+        }
     }
 
     /**
