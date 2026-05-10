@@ -1,13 +1,16 @@
 package model.game;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 
 import model.map.Overlay;
 import model.map.Position;
@@ -709,5 +712,118 @@ public class Game {
             this.best = best_;
             this.parent = parent_;
         }
+    }
+
+    /**
+     * @brief Given the unit position, find all enemy-occupied tiles that are attackable
+     * 
+     * @param attacker_position The position of the attacking unit
+     * @return List of all enemy tiles that are within the unit's attack range
+     */
+    public List<Position> getAttackableTiles(Position attacker_position) {
+        // Check that there is even a unit at the position
+        Unit attacker = this.units_map.get(attacker_position);
+        if (attacker == null) {
+            return List.of();
+        }
+
+        // Check that the unit belongs to the current player
+        if (!attacker.getOwner().equals(this.current_player)) {
+            return List.of();
+        }
+
+        // Check that the unit has not already finished its turn
+        if (attacker.hasAlreadyPlayed()) {
+            return List.of();
+        }
+
+        // Find all tiles in the attack range
+        Set<Position> tiles_in_range = getTilesInRange(
+                attacker_position,
+                attacker.getUnitType().getMinAttackRange(),
+                attacker.getUnitType().getMaxAttackRange()
+        );
+
+        // Keep only those that contain enemy units
+        List<Position> attackable_tiles = new ArrayList<>();
+
+        for (Position tile : tiles_in_range) {
+            Unit target = this.units_map.get(tile);
+
+            // Ignore empty tiles
+            if (target == null) {
+                continue;
+            }
+
+            // Ignore own units
+            if (target.getOwner().equals(attacker.getOwner())) {
+                continue;
+            }
+
+            attackable_tiles.add(tile);
+        }
+
+        // Sort the output so it is stable and predictable
+        Collections.sort(attackable_tiles, new PositionComparator());
+
+        return attackable_tiles;
+    }
+
+        /**
+     * @brief Find all tiles whose graph-distance from the start lies within the given interval
+     * 
+     * @param start The starting tile
+     * @param min_range The minimum allowed distance
+     * @param max_range The maximum allowed distance
+     * @return Set of tiles lying in the requested range interval
+     */
+    private Set<Position> getTilesInRange(Position start, int min_range, int max_range) {
+        // Keep track of visited tiles and their distance from the start
+        Map<Position, Integer> distance = new HashMap<>();
+
+        // BFS queue
+        ArrayDeque<Position> queue = new ArrayDeque<>();
+
+        // Result set
+        Set<Position> tiles_in_range = new HashSet<>();
+
+        // Start from the given tile
+        distance.put(start, 0);
+        queue.add(start);
+
+        while (!queue.isEmpty()) {
+            Position current = queue.removeFirst();
+            int current_distance = distance.get(current);
+
+            // If the current tile is in the valid interval, add it
+            if (!current.equals(start)
+                    && current_distance >= min_range
+                    && current_distance <= max_range) {
+                tiles_in_range.add(current);
+            }
+
+            // Do not expand further once we reached the maximum distance
+            if (current_distance >= max_range) {
+                continue;
+            }
+
+            // Expand the neighboring tiles
+            for (Position neigh : orthogonalNeighbors(current)) {
+                // Ignore tiles outside the board
+                if (!isInside(neigh)) {
+                    continue;
+                }
+
+                // Ignore already visited tiles
+                if (distance.containsKey(neigh)) {
+                    continue;
+                }
+
+                distance.put(neigh, current_distance + 1);
+                queue.addLast(neigh);
+            }
+        }
+
+        return tiles_in_range;
     }
 }
