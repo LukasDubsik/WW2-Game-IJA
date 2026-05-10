@@ -827,7 +827,7 @@ public class Game {
         return tiles_in_range;
     }
 
-        /**
+    /**
      * @brief Perform an attack from one unit onto another unit
      * 
      * @param attacker_position The position of the attacking unit
@@ -868,24 +868,98 @@ public class Game {
             return false;
         }
 
-        // Compute the provisional base damage
-        int damage = attacker.getUnitType().getDamageAgainst(defender.getUnitType());
+        // Deal the main attack damage
+        int attack_damage = computeAttackDamage(attacker, target_position);
+        defender.takeDamage(attack_damage);
 
-        // Apply the damage to the defender
-        defender.takeDamage(damage);
-
-        // If the defender has been destroyed, remove it from the map
+        // If the defender has been destroyed, remove it and finish immediately
         if (defender.isDestroyed()) {
             this.units_map.remove(target_position);
+
+            // Mark the attacking unit as already played
+            attacker.setAlreadyPlayed(true);
+
+            // TODO: Later add a dedicated attack event once the observer/game event
+            //       structure for combat is expanded
+            notifyObservers(new GameEvent());
+
+            return true;
+        }
+
+        // If the defender survived, check whether it can counterattack
+        // Counterattack ignores whose turn it is, but still obeys range rules
+        if (isTileAttackableByRange(target_position, attacker_position)) {
+            int counter_damage = computeAttackDamage(defender, attacker_position);
+            attacker.takeDamage(counter_damage);
+
+            // Remove the attacker if it got destroyed by the counterattack
+            if (attacker.isDestroyed()) {
+                this.units_map.remove(attacker_position);
+            }
         }
 
         // Mark the attacking unit as already played
-        attacker.setAlreadyPlayed(true);
+        if (this.units_map.containsKey(attacker_position)) {
+            attacker.setAlreadyPlayed(true);
+        }
 
         // TODO: Later add a dedicated attack event once the observer/game event
         //       structure for combat is expanded
         notifyObservers(new GameEvent());
 
         return true;
+    }
+
+    /**
+     * @brief Compute the combat damage done by the attacker onto the defender tile
+     * 
+     * @param attacker The attacking unit
+     * @param defender_position The position of the defender
+     * @return The final damage after defence reduction
+     */
+    private int computeAttackDamage(Unit attacker, Position defender_position) {
+        // Get the unit that is being attacked
+        Unit defender = this.units_map.get(defender_position);
+        if (defender == null) {
+            return 0;
+        }
+
+        // Get the base provisional damage from the unit type
+        int base_damage = attacker.getUnitType().getDamageAgainst(defender.getUnitType());
+
+        // Reduce the damage by the tile defence
+        int defence_bonus = getCombinedDefenceBonus(defender_position);
+        int reduced_damage = base_damage - defence_bonus * 2;
+
+        // Always deal at least one damage if the attack was legal
+        if (reduced_damage < 1) {
+            reduced_damage = 1;
+        }
+
+        return reduced_damage;
+    }
+
+    /**
+     * @brief Check whether the attacker at one tile can attack the target tile by range only
+     * 
+     * @param attacker_position The position of the attacking unit
+     * @param target_position The target tile position
+     * @return True if the target lies within the min-max attack range interval
+     */
+    private boolean isTileAttackableByRange(Position attacker_position, Position target_position) {
+        // Check that there even is a unit at the attacker position
+        Unit attacker = this.units_map.get(attacker_position);
+        if (attacker == null) {
+            return false;
+        }
+
+        // Find all tiles in the attack range
+        Set<Position> tiles_in_range = getTilesInRange(
+                attacker_position,
+                attacker.getUnitType().getMinAttackRange(),
+                attacker.getUnitType().getMaxAttackRange()
+        );
+
+        return tiles_in_range.contains(target_position);
     }
 }
