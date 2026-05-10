@@ -133,4 +133,22 @@ public class GameFactory {
         // Return the create game from the map
         return new Game(board_terrain, overlay_terrain);
     }
+
+    /**
+     * @brief Create the game from a map file and then load units from a separate placement file
+     * 
+     * @param map_file The map file
+     * @param unit_file The unit placement file
+     * 
+     * @return The created game with units already loaded
+     */
+    public static Game createGame(Path map_file, Path unit_file) {
+        // First create the base map game
+        Game game = createGame(map_file);
+
+        // Then load the unit placements into it
+        UnitPlacementLoader.loadUnits(game, unit_file);
+
+        return game;
+    }
 }

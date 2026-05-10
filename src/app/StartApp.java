@@ -78,33 +78,13 @@ public class StartApp extends Application {
      */
     @Override
     public void start(Stage stage) {
-        // Load one of the historical large maps from file
+        // Select the scenario to be loaded on application start
+        // To switch scenario later, just change these two paths
         Path map_path = Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.map");
+        Path units_path = Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.units");
 
-        // Load the map into a working game -> using the game factory
-        Game game = GameFactory.createGame(map_path);
-
-        // Preload some testing units directly in code for now
-        // P1 = Soviets attacking from the west / south-west
-        // P2 = Germans defending toward the coastal corridor
-
-        // Soviet testing force
-        game.createUnit("IS-1 Heavy Tank", "P1", 9, 0);
-        game.createUnit("IS-1 Heavy Tank", "P1", 10, 1);
-        game.createUnit("M3 Half-track", "P1", 8, 1);
-        game.createUnit("ZiS-3 Field Gun", "P1", 8, 0);
-        game.createUnit("Soviet Assault Sapper Squad", "P1", 9, 2);
-        game.createUnit("DP-27 Team", "P1", 10, 2);
-        game.createUnit("BA-64 Armored Car", "P1", 11, 0);
-
-        // German testing force
-        game.createUnit("Panzer IV Ausf. J", "P2", 3, 23);
-        game.createUnit("Panzer IV Ausf. J", "P2", 5, 24);
-        game.createUnit("Sd.Kfz. 251/1 Half-track", "P2", 2, 22);
-        game.createUnit("Sd.Kfz. 234/2 Puma", "P2", 7, 24);
-        game.createUnit("Wehrmacht Rifle Squad", "P2", 1, 21);
-        game.createUnit("Grenadier Squad", "P2", 4, 22);
-        game.createUnit("MG 42 Team", "P2", 0, 23);
+        // Load the scenario -> map + starting units
+        Game game = GameFactory.createGame(map_path, units_path);
 
         // Create the prettier side information panel
         InfoPanelWidgets info_panel = createInfoPanel();
