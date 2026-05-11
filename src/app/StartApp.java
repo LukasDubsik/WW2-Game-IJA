@@ -23,6 +23,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.game.Game;
 import model.game.GameFactory;
+import model.map.Building;
 import model.map.Overlay;
 import model.map.Position;
 import model.map.Terrain;
@@ -57,6 +58,10 @@ public class StartApp extends Application {
         InfoRow defence_row; ///< Defence row
         InfoRow move_inf_row; ///< Infantry move cost row
         InfoRow move_veh_row; ///< Vehicle move cost row
+
+        Label building_section; ///< Building section title
+        InfoRow building_owner; ///< Owner of the building
+        InfoRow building_integrity; ///< Integrity of building
 
         Label unit_section; ///< Unit section title
         InfoRow owner_row; ///< Unit owner row
@@ -95,6 +100,11 @@ public class StartApp extends Application {
         turnLabel.setStyle("-fx-text-fill: #d0d0d0; -fx-font-size: 14px;");
         updateTurnLabel(turnLabel, game);
 
+        // Label holding the current wealth of each player
+        Label economyLabel = new Label();
+        economyLabel.setStyle("-fx-text-fill: #FFD700; -fx-font-size: 16px; -fx-font-weight: bold;");
+        updateEconomyLabel(economyLabel, game);
+
         // Create the game canvas
         GameCanvas canvas = new GameCanvas(game, 80, 70);
 
@@ -123,6 +133,8 @@ public class StartApp extends Application {
         ScrollPane scroller = new ScrollPane(centered_pane);
         scroller.setPannable(false);
         scroller.setStyle("-fx-background: black; -fx-background-color: black;");
+        scroller.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroller.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         // Ensure that the center pane resizes with the visible viewport
         scroller.viewportBoundsProperty().addListener((obs, old_bounds, new_bounds) -> {
@@ -221,9 +233,11 @@ public class StartApp extends Application {
         bottomPanel.setAlignment(Pos.CENTER_LEFT);
         bottomPanel.setStyle("-fx-background-color: #111111;");
 
-        // Spacer so the button goes to the right corner
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        // Spacers so the button goes to the right corner
+        Region leftSpacer = new Region();
+        HBox.setHgrow(leftSpacer, Priority.ALWAYS);
+        Region rightSpacer = new Region();
+        HBox.setHgrow(rightSpacer, Priority.ALWAYS);
 
         // Button for shifting to the next turn
         Button nextTurnButton = new Button("Next turn");
@@ -245,12 +259,15 @@ public class StartApp extends Application {
             // Update the lower label
             updateTurnLabel(turnLabel, game);
 
+            // Update the economy label
+            updateEconomyLabel(economyLabel, game);
+
             // Clear stale info from previous turn selection
             clearInfoPanel(info_panel);
         });
 
         // Put the controls together
-        bottomPanel.getChildren().addAll(turnLabel, spacer, nextTurnButton);
+        bottomPanel.getChildren().addAll(turnLabel, leftSpacer, economyLabel, rightSpacer, nextTurnButton);
 
         // Place the panel at the bottom
         root.setBottom(bottomPanel);
@@ -308,6 +325,7 @@ public class StartApp extends Application {
         // Section titles
         panel.tile_section = makeSectionLabel("Tile");
         panel.unit_section = makeSectionLabel("Unit");
+        panel.building_section = makeSectionLabel("Building");
         panel.description_section = makeSectionLabel("Description");
 
         // Tile rows
@@ -316,6 +334,10 @@ public class StartApp extends Application {
         panel.defence_row = createInfoRow("Defence bonus");
         panel.move_inf_row = createInfoRow("Move cost (infantry)");
         panel.move_veh_row = createInfoRow("Move cost (vehicle)");
+
+        //Building rows
+        panel.building_owner = createInfoRow("Owner");
+        panel.building_integrity = createInfoRow("Integrity");
 
         // Unit rows
         panel.owner_row = createInfoRow("Owner");
@@ -357,6 +379,9 @@ public class StartApp extends Application {
                 panel.defence_row.box,
                 panel.move_inf_row.box,
                 panel.move_veh_row.box,
+                panel.building_section,
+                panel.building_owner.box,
+                panel.building_integrity.box,
                 panel.unit_section,
                 panel.owner_row.box,
                 panel.status_row.box,
@@ -455,15 +480,16 @@ public class StartApp extends Application {
 
         setSectionVisible(panel.tile_section, false);
         setSectionVisible(panel.unit_section, false);
+        setSectionVisible(panel.building_section, false);
         setSectionVisible(panel.description_section, true);
-
         setRowValue(panel.terrain_row, null);
         setRowValue(panel.overlay_row, null);
         setRowValue(panel.defence_row, null);
         setRowValue(panel.move_inf_row, null);
         setRowValue(panel.move_veh_row, null);
-
         setRowValue(panel.owner_row, null);
+        setRowValue(panel.building_owner, null);
+        setRowValue(panel.building_integrity, null);
         setRowValue(panel.status_row, null);
         setRowValue(panel.movement_row, null);
         setRowValue(panel.price_row, null);
@@ -504,6 +530,27 @@ public class StartApp extends Application {
                 panel.tile_section,
                 anyVisible(panel.terrain_row, panel.overlay_row, panel.defence_row, panel.move_inf_row, panel.move_veh_row)
         );
+
+        //If the terrain is a building show building information
+        if(Terrain.isBuilding(terrain)) {
+            setSectionVisible(panel.building_section, true);
+
+            //If building is owned by a player show the owner and integrity
+            if(game.getBuilding(position) != null){
+                Building building = game.getBuilding(position);
+
+                setRowValue(panel.building_owner, building.getOwner());
+                setRowValue(panel.building_integrity, building.getIntegrity() + " / " + building.getMaxIntegrity());
+            }
+            else{
+                setRowValue(panel.building_owner, "None");
+            }
+        }
+        else {
+            setSectionVisible(panel.building_section, false);
+            setRowValue(panel.building_owner, null);
+            setRowValue(panel.building_integrity, null);
+        }
 
         // If there is no unit at the tile, show tile-only information
         if (unit == null) {
@@ -837,6 +884,22 @@ public class StartApp extends Application {
      */
     private static void updateTurnLabel(Label turnLabel, Game game) {
         turnLabel.setText("Turn: " + game.getCurrentTurn() + " | Current player: " + game.getCurrentPlayer());
+    }
+
+    /**
+     * @brief Update the economy label text
+     *
+     * @param economyLabel The label to be updated
+     * @param game The game from which to read the active turn
+     */
+    private static void updateEconomyLabel(Label economyLabel, Game game) {
+        Map<String, Integer> playerWealth = game.getPlayerWealth();
+        String p1 = (String) playerWealth.keySet().toArray()[0];
+        String p2 = (String) playerWealth.keySet().toArray()[1];
+        int p1Wealth = playerWealth.get(p1);
+        int p2Wealth = playerWealth.get(p2);
+
+        economyLabel.setText(p1Wealth + "$ : " + p1 + " | " + p2 + " : " + p2Wealth + "$");
     }
 
     /**

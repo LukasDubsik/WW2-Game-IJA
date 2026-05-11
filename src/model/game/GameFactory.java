@@ -49,8 +49,11 @@ public class GameFactory {
         // Convert into the list of rows
         String[] map_rows = map_holder.toArray(String[]::new);
 
+        // Create 2 players
+        String[] players = {"P1", "P2"};
+
         // Return the created game
-        return createGame(map_rows);
+        return createGame(map_rows, players);
     }
 
     /**
@@ -60,7 +63,7 @@ public class GameFactory {
      * 
      * @return The created Game class from the input map in array String form
      */
-    public static Game createGame(String[] map) {
+    public static Game createGame(String[] map, String[] players) {
         // Check that the input is valid
         if (map == null || map.length == 0) {
             throw new IllegalArgumentException("Map can't be null or have zero length!");
@@ -131,7 +134,7 @@ public class GameFactory {
         Overlay[][] overlay_terrain = rows_o.toArray(Overlay[][]::new);
 
         // Return the create game from the map
-        return new Game(board_terrain, overlay_terrain);
+        return new Game(board_terrain, overlay_terrain, players);
     }
 
     /**
@@ -148,6 +151,7 @@ public class GameFactory {
 
         // Then load the unit placements into it
         UnitPlacementLoader.loadUnits(game, unit_file);
+        game.setOwnership();
 
         return game;
     }

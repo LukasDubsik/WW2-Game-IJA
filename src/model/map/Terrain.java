@@ -90,4 +90,13 @@ public enum Terrain {
             default -> throw new IllegalArgumentException("Unsupported terrain value: " + type_proc);
         };
     }
+
+    /**
+     * @brief Check if the terrain is a building.
+     *
+     * @return True if the terrain is a building.
+     */
+    public static boolean isBuilding(Terrain terrain){
+        return terrain == Terrain.CITY || terrain == Terrain.FACTORY || terrain == Terrain.HQ;
+    }
 }

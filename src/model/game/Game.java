@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
+import model.map.Building;
 import model.map.Overlay;
 import model.map.Position;
 import model.map.Terrain;
@@ -30,6 +31,9 @@ public class Game {
     private final Overlay[][] overlay_map; ///< The map of the game -> in terms of overlay
 
     private final Map<Position, Unit> units_map = new HashMap<>(); ///< Position to unit
+    private final Map<Position, Building> buildings = new HashMap<>(); ///< Position to an owned building
+
+    private final Map<String, Integer> playerWealth = new HashMap<>(); ///< Track the wealth of each player
 
     private final int rows; ///< Number of rows of the map
     private final int columns; ///< Number of ciolumns of the map
@@ -46,7 +50,7 @@ public class Game {
      * 
      * @param map_ The array map - already converted to the Terrain enum
      */
-    Game(Terrain[][] map_, Overlay[][] overlay_) {
+    Game(Terrain[][] map_, Overlay[][] overlay_, String[] players) {
         // Make sure the games are independent by copying the input map
         this.map = copyInputMap(map_);
         // Acquire some values for easier future analysis
@@ -54,6 +58,10 @@ public class Game {
         this.columns = map[0].length;
         // Copy the overlay map
         this.overlay_map = copyOverlayMap(overlay_, rows, columns);
+
+        //Set each players wealth to 0
+        for(String player : players)
+            playerWealth.put(player, 0);
     }
 
     /**
@@ -445,6 +453,15 @@ public class Game {
     }
 
     /**
+     * @brief Get the wealth of each player
+     *
+     * @return The map of players and their wealth
+     */
+    public Map<String, Integer> getPlayerWealth() {
+        return playerWealth;
+    }
+
+    /**
      * @brief Get all neighboring tiles around the given tile on the hex map
      * 
      * @param pos The position whose neighbors we want
@@ -497,10 +514,59 @@ public class Game {
             }
         }
 
+        // Reset capture progress
+        buildings.forEach((position, building) -> {
+            if(building.isFull())
+                return;
+
+            Unit unit = getUnit(position);
+            if (unit == null)
+                building.setIntegrity(building.getMaxIntegrity());
+            else if(unit.getOwner().equals(this.current_player))
+                building.setIntegrity(building.getMaxIntegrity());
+        });
+
+        // Capture logic
+        for (Unit unit : units_map.values()) {
+            if(!unit.getOwner().equals(this.current_player))
+                continue;
+
+            Building building = getBuilding(unit.getPosition());
+            if(building == null){
+                Terrain terrain = getTerrain(unit.getPosition());
+                if(!Terrain.isBuilding(terrain))
+                    continue;
+                if (terrain == Terrain.CITY)
+                    buildings.put(unit.getPosition(), new Building(unit.getOwner(), terrain));
+                else
+                    buildings.put(unit.getPosition(), new Building(unit.getOwner(), terrain));
+
+                continue;
+            }
+
+            if(!unit.getOwner().equals(building.getOwner())){
+                building.setIntegrity(building.getIntegrity() - 1);
+                if(building.getIntegrity() == 0){
+                    building.setOwner(this.current_player);
+                    building.setIntegrity(3);
+                }
+            }
+        }
+
+        // Income logic
+        for(Building building : buildings.values()){
+            if(building.getOwner().equals(this.current_player))
+                continue;
+
+            if(building.isCity()){
+                Integer currentWealth = playerWealth.get(building.getOwner());
+                playerWealth.remove(building.getOwner());
+                playerWealth.put(building.getOwner(), currentWealth + 1000);
+            }
+        }
+
         // TODO: Later, at turn start, also handle:
         //       - repairs
-        //       - income
-        //       - capture progress / reset logic if needed
         //       - artillery move/attack state if separated
 
         // Notify the observers that the game changed
@@ -1135,5 +1201,28 @@ public class Game {
             case INFANTRY -> TargetClass.SOFT;
             case VEHICLE -> TargetClass.HARD;
         };
+    }
+
+    /**
+     * @brief At the start of the game run this method to set the ownership of initial buildings.
+     *
+     */
+    public void setOwnership(){
+        for(Unit unit : units_map.values()){
+            Terrain terrain = getTerrain(unit.getPosition());
+            if(!Terrain.isBuilding(terrain))
+                continue;
+
+            buildings.put(unit.getPosition(), new Building(unit.getOwner(), terrain));
+        }
+    }
+
+    /**
+     * @brief Get an owned building at a specific position
+     *
+     * @return A building at the desired position
+     */
+    public Building getBuilding(Position position){
+        return buildings.get(position);
     }
 }
