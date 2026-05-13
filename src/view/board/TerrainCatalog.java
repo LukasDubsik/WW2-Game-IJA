@@ -1,7 +1,7 @@
 package view.board;
 
 import javafx.scene.paint.Color;
-import model.map.Terrain;
+import model.map.Serializable.Terrain;
 
 /**
  * @class TerrainStyleCatalog

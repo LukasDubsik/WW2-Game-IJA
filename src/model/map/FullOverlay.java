@@ -1,5 +1,7 @@
 package model.map;
 
+import model.map.Serializable.Overlay;
+
 /**
  * @class FullOverlay
  * @brief Holds the position and the overlay upon it

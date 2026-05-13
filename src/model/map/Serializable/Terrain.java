@@ -1,10 +1,12 @@
-package model.map;
+package model.map.Serializable;
+
+import java.io.Serializable;
 
 /**
  * @enum Terrain
  * @brief The individual Terrain types of the game
  */
-public enum Terrain {
+public enum Terrain implements Serializable {
     // List of the types and their names of the Terrain and values
     // Goes as: CODE, DISPLAY_NAME, ASSET_KEY, DEFENCE_BONUS, INFANTRY_COST, VEHICLE_COST
     PLAIN("P", "Plain", "snow_plain", 1, 1, 1),
@@ -24,8 +26,7 @@ public enum Terrain {
 
     /**
      * @brief Constructor of the Terrain enum
-     * 
-     * @param val_ The String value of the enum.
+     *
      */
     Terrain(String code_, String display_name_, String asset_key_, int defence_bonus_, int infantry_cost_, int vehicle_cost_) {
         this.code = code_;

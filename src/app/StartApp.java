@@ -1,10 +1,13 @@
 package app;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
@@ -24,14 +27,18 @@ import javafx.stage.Stage;
 import model.game.Game;
 import model.game.GameFactory;
 import model.map.Building;
-import model.map.Overlay;
+import model.map.Serializable.Overlay;
 import model.map.Position;
-import model.map.Terrain;
+import model.map.Serializable.Terrain;
 import model.unit.ArmamentType;
 import model.unit.Unit;
+import replay.Replay;
 import view.board.GameCanvas;
 
 public class StartApp extends Application {
+
+    private Game game; ///< Current game
+    private GameCanvas canvas;
 
     /**
      * @brief Small helper structure for one field row in the side panel
@@ -89,7 +96,7 @@ public class StartApp extends Application {
         Path units_path = Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.units");
 
         // Load the scenario -> map + starting units
-        Game game = GameFactory.createGame(map_path, units_path);
+        game = GameFactory.createGame(map_path, units_path);
 
         // Create the prettier side information panel
         InfoPanelWidgets info_panel = createInfoPanel();
@@ -100,13 +107,18 @@ public class StartApp extends Application {
         turnLabel.setStyle("-fx-text-fill: #d0d0d0; -fx-font-size: 14px;");
         updateTurnLabel(turnLabel, game);
 
+        // Label if the game is in replay mode
+        Label replayLabel = new Label();
+        replayLabel.setStyle("-fx-text-fill: red; -fx-font-size: 14px;");
+        updateReplayLabel(replayLabel, game);
+
         // Label holding the current wealth of each player
         Label economyLabel = new Label();
         economyLabel.setStyle("-fx-text-fill: #FFD700; -fx-font-size: 16px; -fx-font-weight: bold;");
         updateEconomyLabel(economyLabel, game);
 
         // Create the game canvas
-        GameCanvas canvas = new GameCanvas(game, 80, 70);
+        canvas = new GameCanvas(game, 80, 70);
 
         // What happens when tile is clicked by a mouse
         canvas.setOnTileClicked(position -> {
@@ -181,7 +193,7 @@ public class StartApp extends Application {
             double dx = event.getSceneX() - mouse[0];
             double dy = event.getSceneY() - mouse[1];
 
-            // Ignore extremely small hand jitter so a click is not lost
+            // Ignore tiny hand jitter so a click is not lost
             if (!dragging[0] && Math.hypot(dx, dy) < drag_threshold) {
                 return;
             }
@@ -218,13 +230,14 @@ public class StartApp extends Application {
             if (!dragging[0]) {
                 javafx.geometry.Point2D localPoint = canvas.sceneToLocal(event.getSceneX(), event.getSceneY());
                 canvas.handleClick(localPoint.getX(), localPoint.getY());
+                updateReplayLabel(replayLabel, game);
             }
 
             dragging[0] = false;
             event.consume();
         });
 
-        // Center the scroller on the center of the all
+        // Center the scroller in the center of the all
         root.setCenter(scroller);
 
         // Create a lower control bar for turn handling
@@ -238,6 +251,96 @@ public class StartApp extends Application {
         HBox.setHgrow(leftSpacer, Priority.ALWAYS);
         Region rightSpacer = new Region();
         HBox.setHgrow(rightSpacer, Priority.ALWAYS);
+
+        // Button to open a new replay
+        Button openReplayButton = new Button("Open replay");
+        openReplayButton.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+
+        openReplayButton.setOnAction(event -> {
+            CompletableFuture.runAsync(new Runnable() {
+                @Override
+                public void run() {
+                    FileUtil.chooseFile("Open replay");
+
+                    File file = FileUtil.file;
+                    if(file == null)
+                        return;
+
+                    Replay replay = FileUtil.readFiletoReplay(file);
+                    if(replay == null)
+                        return;
+                    String[] players = {"P1", "P2"};
+
+                    game = new Game(players, replay);
+                    canvas.setGame(game);
+
+                    Platform.runLater(() -> {
+                        canvas.draw();
+                        updateReplayLabel(replayLabel, game);
+                    });
+                }
+            });
+
+
+        });
+
+        // Button to save the replay of the current game
+        Button saveReplayButton = new Button("Save replay");
+        saveReplayButton.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+        saveReplayButton.setOnAction(event -> {
+            CompletableFuture.runAsync(new Runnable() {
+                @Override
+                public void run() {
+
+                    FileUtil.createReplayFile("Save replay");
+                    File file = FileUtil.file;
+                    if(file == null)
+                        return;
+
+                    FileUtil.saveReplayToFile(game.getReplay(), file);
+                }
+            });
+        });
+
+        // Button to revert the previouse turn
+        Button prevTurnButton = new Button("Prev turn");
+        prevTurnButton.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+        prevTurnButton.setOnAction(event -> {
+            game.prevTurn();
+
+            // Remove all previous visual movement selections
+            canvas.clearSelections();
+
+            // Update the lower label
+            updateTurnLabel(turnLabel, game);
+
+            // Update replay label
+            updateReplayLabel(replayLabel, game);
+
+            // Update the economy label
+            updateEconomyLabel(economyLabel, game);
+
+            // Clear stale info from previous turn selection
+            clearInfoPanel(info_panel);
+        });
 
         // Button for shifting to the next turn
         Button nextTurnButton = new Button("Next turn");
@@ -259,6 +362,9 @@ public class StartApp extends Application {
             // Update the lower label
             updateTurnLabel(turnLabel, game);
 
+            // Update replay label
+            updateReplayLabel(replayLabel, game);
+
             // Update the economy label
             updateEconomyLabel(economyLabel, game);
 
@@ -267,7 +373,7 @@ public class StartApp extends Application {
         });
 
         // Put the controls together
-        bottomPanel.getChildren().addAll(turnLabel, leftSpacer, economyLabel, rightSpacer, nextTurnButton);
+        bottomPanel.getChildren().addAll(turnLabel, replayLabel, leftSpacer, economyLabel, rightSpacer, openReplayButton, saveReplayButton, prevTurnButton, nextTurnButton);
 
         // Place the panel at the bottom
         root.setBottom(bottomPanel);
@@ -887,6 +993,19 @@ public class StartApp extends Application {
     }
 
     /**
+     * @brief Update the reply label
+     *
+     * @param replayLabel The label to be updated
+     * @param game The game from which to read the active turn
+     */
+    private static void updateReplayLabel(Label replayLabel, Game game){
+        if(game.isReplayMode())
+            replayLabel.setText("*Replay mode");
+        else
+            replayLabel.setText("");
+    }
+
+    /**
      * @brief Update the economy label text
      *
      * @param economyLabel The label to be updated
@@ -970,5 +1089,14 @@ public class StartApp extends Application {
         } else {
             scroller.setVvalue(0.0);
         }
+    }
+
+    /**
+     * @brief Getter for the current game
+     *
+     * @return The current game
+     */
+    public Game getGame() {
+        return game;
     }
 }

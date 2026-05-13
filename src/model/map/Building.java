@@ -1,5 +1,7 @@
 package model.map;
 
+import model.map.Serializable.Terrain;
+
 public class Building {
 
     private final Terrain terrain; ///< Holder of the specific type of building

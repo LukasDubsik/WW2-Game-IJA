@@ -17,15 +17,15 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 import model.game.Game;
-import model.map.Overlay;
+import model.map.Serializable.Overlay;
 import model.map.Position;
-import model.map.Terrain;
+import model.map.Serializable.Terrain;
 import model.unit.Unit;
 
 public final class GameCanvas extends Canvas {
     
     // Holders for the internal values
-    private final Game game; ///< The whole game keeping the internal state
+    private Game game; ///< The whole game keeping the internal state
     private final double tile_size_x; ///< The size of the tile x -> will be hexagons
     private final double tile_size_y; ///< the size of the tile y
 
@@ -78,6 +78,10 @@ public final class GameCanvas extends Canvas {
         draw();
     }
 
+    public void setGame(Game game){
+        this.game = game;
+    }
+
     /**
      * @brief Handle the click of the mouse on the canvas
      * 
@@ -101,6 +105,13 @@ public final class GameCanvas extends Canvas {
         // If the tile is an attack option, perform the attack
         if (attack_map[clicked.row()][clicked.column()]) {
             if (previous_position != null) {
+
+                // Turn off replay mode
+                if (game.isReplayMode()) {
+                    game.setReplayMode(false);
+                    game.getReplay().branchTimeline();
+                }
+
                 game.attackUnit(previous_position, clicked);
             }
 
@@ -112,6 +123,16 @@ public final class GameCanvas extends Canvas {
         // If the tile is one of the movement options, animate movement and stop here
         if (movement_map[clicked.row()][clicked.column()]) {
             animateMovement(previous_position, clicked);
+
+            // Turn off replay mode
+            if (game.isReplayMode()) {
+                game.setReplayMode(false);
+                game.getReplay().branchTimeline();
+            }
+
+            // Add record of the move
+            game.getReplay().addMove(previous_position, clicked);
+
             return;
         }
 
@@ -667,7 +688,7 @@ public final class GameCanvas extends Canvas {
         }
 
         timeline.setOnFinished(event -> {
-            boolean moved_ok = game.moveUnit(from, to);
+            boolean moved_ok = game.moveUnit(from, to, false);
 
             // If the logical move failed for any reason, just reset the UI safely
             if (!moved_ok) {

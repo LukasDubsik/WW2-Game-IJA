@@ -1,42 +1,28 @@
 package model.game;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Set;
+import java.util.*;
 
-import model.map.Building;
-import model.map.Overlay;
-import model.map.Position;
-import model.map.Terrain;
+import model.map.*;
+import model.map.Serializable.GameMap;
+import model.map.Serializable.Overlay;
+import model.map.Serializable.Terrain;
 import model.unit.TargetClass;
 import model.unit.Unit;
 import model.unit.UnitType;
+import replay.*;
 
 /**
  * @class Game
- * @brief The main class holding values of teh current game
+ * @brief The main class holding values of the current game
  */
 public class Game {
 
-    // The values held by the class
-    private final Terrain[][] map; ///< The map of the game -> in terms of terrain
-    private final Overlay[][] overlay_map; ///< The map of the game -> in terms of overlay
+    private final GameMap gameMap;
 
     private final Map<Position, Unit> units_map = new HashMap<>(); ///< Position to unit
     private final Map<Position, Building> buildings = new HashMap<>(); ///< Position to an owned building
 
     private final Map<String, Integer> playerWealth = new HashMap<>(); ///< Track the wealth of each player
-
-    private final int rows; ///< Number of rows of the map
-    private final int columns; ///< Number of ciolumns of the map
 
     private final List<GameObserver> observers = new ArrayList<>();
 
@@ -44,24 +30,52 @@ public class Game {
     private String current_player = "P1"; ///< The currently active player
 
     private List<Position> last_movement_path = new ArrayList<>(); ///< The most recently computed movement path
+
+    private Replay replay; ///< The replay of that game
+    private boolean replayMode; ///< If the game is in replay mode
     
     /**
      * @brief The constructor of the Game class
      * 
-     * @param map_ The array map - already converted to the Terrain enum
+     * @param map The array map - already converted to the Terrain enum
+     * @param overlay The map of all overlays
+     * @param players List of all players
      */
-    Game(Terrain[][] map_, Overlay[][] overlay_, String[] players) {
-        // Make sure the games are independent by copying the input map
-        this.map = copyInputMap(map_);
-        // Acquire some values for easier future analysis
-        this.rows = map.length;
-        this.columns = map[0].length;
-        // Copy the overlay map
-        this.overlay_map = copyOverlayMap(overlay_, rows, columns);
+    public Game(Terrain[][] map, Overlay[][] overlay, String[] players) {
+        this.gameMap = new GameMap(map, overlay);
 
-        //Set each players wealth to 0
+        // Set each player's wealth to 0
         for(String player : players)
             playerWealth.put(player, 0);
+
+        replayMode = false;
+    }
+
+    /**
+     * @brief Start a new game from a loaded replay
+     *
+     * @param players List of all players
+     * @param replay Loaded replay
+     */
+    public Game(String[] players, Replay replay){
+        this.gameMap = replay.getMap();
+        this.replay = new Replay(replay);
+        this.units_map.putAll(replay.getUnits());
+
+        // Heal all damaged units in the replay
+        for(Unit unit : units_map.values()){
+            unit.setCurrentHp(unit.getUnitType().getMaxHP());
+        }
+
+        //Set each player's wealth to 0
+        for(String player : players)
+            playerWealth.put(player, 0);
+
+        // Loaded replay is running in replay mode
+        replayMode = true;
+
+        // Set the initial ownership of buildings
+        setOwnership();
     }
 
     /**
@@ -70,7 +84,7 @@ public class Game {
      * @return The number of the columns.
      */
     public int getColumns() {
-        return this.columns;
+        return this.gameMap.getColumns();
     }
 
     /**
@@ -79,7 +93,7 @@ public class Game {
      * @return The number of the rows.
      */
     public int getRows() {
-        return this.rows;
+        return this.gameMap.getRows();
     }
 
     /**
@@ -109,7 +123,7 @@ public class Game {
      * @return The terrain at the position
      */
     public Terrain getTerrain(Position pos) {
-        return map[pos.row()][pos.column()];
+        return gameMap.getTerrainsMap()[pos.row()][pos.column()];
     }
 
     /**
@@ -120,7 +134,7 @@ public class Game {
      * @return The overlay at the position
      */
     public Overlay getOverlay(Position pos) {
-        return overlay_map[pos.row()][pos.column()];
+        return gameMap.getOverlayMap()[pos.row()][pos.column()];
     }
 
     /**
@@ -212,10 +226,12 @@ public class Game {
      * 
      * @param from Starting position
      * @param to Target position
+     * @param ignoreChecks Force the move
      * 
      * @return True if movement was performed, false otherwise
      */
-    public boolean moveUnit(Position from, Position to) {
+    public boolean moveUnit(Position from, Position to, boolean ignoreChecks) {
+
         // Basic null protection
         if (from == null || to == null) {
             return false;
@@ -223,28 +239,28 @@ public class Game {
 
         // Check that there is any unit at the position even
         Unit unit = this.units_map.get(from);
-        if (unit == null) {
+        if (!ignoreChecks && unit == null) {
             return false;
         }
 
         // Check that the unit belongs to the active player
-        if (!unit.getOwner().equals(this.current_player)) {
+        if (!ignoreChecks && !unit.getOwner().equals(this.current_player)) {
             return false;
         }
 
         // Check that the unit has not yet fully played this turn
-        if (unit.hasAlreadyPlayed()) {
+        if (!ignoreChecks && unit.hasAlreadyPlayed()) {
             return false;
         }
 
         // Check that the unit has not already moved this turn
-        if (unit.hasMovedThisTurn()) {
+        if (!ignoreChecks && unit.hasMovedThisTurn()) {
             return false;
         }
 
         // Get the exact path
         List<Position> path = getMovementPath(from, to);
-        if (path.isEmpty()) {
+        if (!ignoreChecks && path.isEmpty()) {
             return false;
         }
 
@@ -325,69 +341,10 @@ public class Game {
      * @return Returns true if inside, false if outside
      */
     private boolean isInside(Position pos) {
-        boolean row_check = pos.row() >= 0 && pos.row() < rows;
-        boolean column_check = pos.column() >= 0 && pos.column() < columns;
+        boolean row_check = pos.row() >= 0 && pos.row() < gameMap.getRows();
+        boolean column_check = pos.column() >= 0 && pos.column() < gameMap.getColumns();
         return row_check && column_check;
     }
-
-    /**
-     * @brief Copies the incoming map into a new form to make sure the games stay independent
-     * 
-     * @param map_in The input map of Terrain enums
-     * @return The copied map of the same type and form
-     */
-    private static Terrain[][] copyInputMap(Terrain[][] map_in) {
-        // Create an empty holder of the same size
-        Terrain[][] copy = new Terrain[map_in.length][];
-
-        // Copy element by element
-        for (int i = 0; i < map_in.length; i++) {
-            copy[i] = Arrays.copyOf(map_in[i], map_in[i].length);
-        }
-
-        // Return the copied form
-        return copy;
-    }
-
-    /**
-     * @brief Copies the incoming overlay map or creates an empty one if null
-     */
-    private static Overlay[][] copyOverlayMap(Overlay[][] overlay_, int rows, int columns) {
-        // CXreate the copy map
-        Overlay[][] copy = new Overlay[rows][columns];
-
-        // Fill the map with NONE as a base
-        for (int row = 0; row < rows; row++) {
-            Arrays.fill(copy[row], Overlay.NONE);
-        }
-
-        // If nothing was provided, no overlays are present
-        if (overlay_ == null) {
-            return copy;
-        }
-
-        // Check that dimensions match
-        if (overlay_.length != rows) {
-            throw new IllegalArgumentException("Overlay row count must match terrain row count.");
-        }
-
-        // Then, finally, start copying
-        for (int row = 0; row < rows; row++) {
-            // If dimensions don't match a rectangle
-            if (overlay_[row] == null || overlay_[row].length != columns) {
-                throw new IllegalArgumentException("Overlay map must have same rectangular shape as terrain map.");
-            }
-
-            // If okay, copy
-            for (int column = 0; column < columns; column++) {
-                copy[row][column] = overlay_[row][column] == null ? Overlay.NONE : overlay_[row][column];
-            }
-        }
-
-        return copy;
-    }
-
-    // To get combined costs
 
     /**
      * @brief Get the effective defence bonus = terrain + overlay
@@ -497,12 +454,27 @@ public class Game {
      * @brief Shift the game to the next turn
      */
     public void nextTurn() {
-        // Switch the active player
-        if (this.current_player.equals("P1")) {
-            this.current_player = "P2";
-        } else {
-            this.current_player = "P1";
+
+        boolean wasReplaying = replayMode;
+
+        // If running replay mode get the turn from the replay record
+        if(replayMode) {
+            TurnRecord turnRecord = replay.getCurrentTurn();
+            if(turnRecord != null) {
+
+                // Revert the moves made in the replay
+                revertMoves(turnRecord, false);
+
+                // Revert the damage dealt in the replay
+                revertDamage(turnRecord, false);
+
+                replay.advanceTurn();
+            }
+            replayMode = !replay.isAtEnd();
         }
+
+        // Switch the active player
+        this.current_player = swapPlayers(this.current_player);
 
         // Advance the turn counter
         this.current_turn++;
@@ -520,10 +492,14 @@ public class Game {
                 return;
 
             Unit unit = getUnit(position);
-            if (unit == null)
+            if (unit == null){;
+                replay.getCurrentTurn().addBir(position, building.getMaxIntegrity() - building.getIntegrity(), building.getOwner());
                 building.setIntegrity(building.getMaxIntegrity());
-            else if(unit.getOwner().equals(this.current_player))
+            }
+            else if(unit.getOwner().equals(building.getOwner())){
+                replay.getCurrentTurn().addBir(position, building.getMaxIntegrity() - building.getIntegrity(), building.getOwner());
                 building.setIntegrity(building.getMaxIntegrity());
+            }
         });
 
         // Capture logic
@@ -536,34 +512,39 @@ public class Game {
                 Terrain terrain = getTerrain(unit.getPosition());
                 if(!Terrain.isBuilding(terrain))
                     continue;
-                if (terrain == Terrain.CITY)
-                    buildings.put(unit.getPosition(), new Building(unit.getOwner(), terrain));
-                else
-                    buildings.put(unit.getPosition(), new Building(unit.getOwner(), terrain));
+
+                buildings.put(unit.getPosition(), new Building(unit.getOwner(), terrain));
+                replay.getCurrentTurn().addBir(unit.getPosition(), 0, null);
 
                 continue;
             }
 
             if(!unit.getOwner().equals(building.getOwner())){
                 building.setIntegrity(building.getIntegrity() - 1);
+
                 if(building.getIntegrity() == 0){
                     building.setOwner(this.current_player);
                     building.setIntegrity(3);
+                    replay.getCurrentTurn().addBir(unit.getPosition(), -1, swapPlayers(this.current_player));
                 }
+                else
+                    replay.getCurrentTurn().addBir(unit.getPosition(), -1, this.current_player);
             }
         }
 
         // Income logic
+        int prevWealth = playerWealth.get(swapPlayers(this.current_player));
         for(Building building : buildings.values()){
             if(building.getOwner().equals(this.current_player))
                 continue;
 
             if(building.isCity()){
                 Integer currentWealth = playerWealth.get(building.getOwner());
-                playerWealth.remove(building.getOwner());
                 playerWealth.put(building.getOwner(), currentWealth + 1000);
             }
         }
+        if(!wasReplaying)
+            replay.addNextTurn(playerWealth.get(swapPlayers(this.current_player)) - prevWealth);
 
         // TODO: Later, at turn start, also handle:
         //       - repairs
@@ -571,6 +552,197 @@ public class Game {
 
         // Notify the observers that the game changed
         notifyObservers(new GameEvent());
+    }
+
+    public void prevTurn(){
+
+        // Revert any moves made in an unfinished turn
+        if (!replayMode) {
+            TurnRecord currentTurnRecord = replay.getCurrentTurn();
+            if (currentTurnRecord != null &&
+                    (!currentTurnRecord.getMoves().isEmpty() ||
+                     !currentTurnRecord.getDamageList().isEmpty() ||
+                     !currentTurnRecord.getUnitsDestroyed().isEmpty()))
+            {
+
+                // Restore all destroyed units in that turn
+                revertDestroedUnits(currentTurnRecord);
+                currentTurnRecord.getUnitsDestroyed().clear();
+
+                // Restore all damage dealt in current turn
+                revertDamage(currentTurnRecord, true);
+                currentTurnRecord.getDamageList().clear();
+
+                // Restore all moves in current turn
+                revertMoves(currentTurnRecord, true);
+                currentTurnRecord.getMoves().clear();
+            }
+        }
+
+        // Check if it is the first turn
+        if(this.current_turn <= 1){
+            notifyObservers(new GameEvent());
+            return;
+        }
+
+        // Revert the turn
+        this.current_turn--;
+        this.current_player = swapPlayers(this.current_player);
+
+        replayMode = true;
+
+        // Get the record of the reverted turn
+        TurnRecord turnRecord = replay.goBackward();
+        if(turnRecord == null) {
+            notifyObservers(new GameEvent());
+            return;
+        }
+
+        // Restore all destroyed units
+        revertDestroedUnits(turnRecord);
+
+        // Restore all damage dealt that turn
+        revertDamage(turnRecord, true);
+
+        // Revert the moves
+        revertMoves(turnRecord, true);
+
+        // Revert the building changes
+        revertBuildingChanges(turnRecord);
+
+        // Restore the previouse player wealth
+        revertPlayerWealth(turnRecord);
+
+        // Notify the observers that the game changed
+        notifyObservers(new GameEvent());
+    }
+
+    /**
+     * @brief Revert the moves done that turn
+     *
+     * @param turnRecord Turn record to revert
+     * @param revert revert or advance
+     */
+    private void revertMoves(TurnRecord turnRecord, boolean revert){
+        if(revert){
+            ArrayList<MoveRecord> moves = turnRecord.getMoves();
+
+            for (int i = moves.size() - 1; i >= 0; i--) {
+                MoveRecord moveRecord = moves.get(i);
+                Unit unit = getUnit(moveRecord.pos2());
+                if(unit == null)
+                    throw new RuntimeException("Replay is corrupted " + moveRecord.pos2().toString());
+
+                moveUnit(moveRecord.pos2(), moveRecord.pos1(), true);
+                unit.setMovedThisTurn(false);
+                unit.setAlreadyPlayed(false);
+            }
+        }
+        else{
+            for (MoveRecord moveRecord : turnRecord.getMoves()) {
+                Unit unit = getUnit(moveRecord.pos1());
+                if(unit == null)
+                    throw new RuntimeException("Replay is corrupted " + moveRecord.pos1().toString());
+
+                unit.setMovedThisTurn(false);
+                unit.setAlreadyPlayed(false);
+                moveUnit(moveRecord.pos1(), moveRecord.pos2(), true);
+            }
+        }
+    }
+
+    /**
+     * @brief Revert the building changes made that turn
+     *
+     * @param turnRecord Turn record to revert
+     */
+    private void revertBuildingChanges(TurnRecord turnRecord){
+        ArrayList<BuildingIntegrityRecord> birList = turnRecord.getBirList();
+
+        for(int i = birList.size() - 1; i >= 0; i--){
+            BuildingIntegrityRecord bir = birList.get(i);
+
+            if(bir.prevOwner() == null){
+                buildings.remove(bir.buildingPos());
+                continue;
+            }
+
+            Building building = getBuilding(bir.buildingPos());
+            building.setIntegrity(building.getIntegrity() - bir.change());
+            building.setOwner(bir.prevOwner());
+        }
+    }
+
+    /**
+     * @brief Revert the destroyed units that turn
+     *
+     * @param turnRecord Turn record to revert
+     */
+    private void revertDestroedUnits(TurnRecord turnRecord){
+        ArrayList<Unit> destroyedUnits = turnRecord.getUnitsDestroyed();
+
+        for(int i = destroyedUnits.size() - 1; i >= 0; i--){
+            Unit unit = destroyedUnits.get(i);
+            units_map.put(unit.getPosition(), unit);
+        }
+    }
+
+    /**
+     * @brief Revert the damage dealt that turn
+     *
+     * @param turnRecord Turn record to revert
+     * @param revert revert or advance
+     */
+    private void revertDamage(TurnRecord turnRecord, boolean revert){
+        ArrayList<DamageRecord> damageList = turnRecord.getDamageList();
+        if (revert) {
+            for(int i = damageList.size() - 1; i >= 0; i--){
+                DamageRecord damageRecord = damageList.get(i);
+                Unit unit = getUnit(damageRecord.position());
+
+                if(unit == null)
+                    throw new RuntimeException("Replay is corrupted at " + damageRecord.position().toString());
+
+                unit.setCurrentHp(unit.getCurrentHp() + damageRecord.damage());
+            }
+        } else {
+            for(int i = 0; i < damageList.size(); i++){
+                DamageRecord damageRecord = damageList.get(i);
+                Unit unit = getUnit(damageRecord.position());
+
+                if(unit == null)
+                    throw new RuntimeException("Replay is corrupted at " + damageRecord.position().toString());
+
+                unit.takeDamage(damageRecord.damage());
+                if(unit.isDestroyed())
+                    this.units_map.remove(unit.getPosition());
+            }
+        }
+    }
+
+    /**
+     * @brief Revert the player wealth
+     *
+     * @param turnRecord Turn record to revert
+     */
+    private void revertPlayerWealth(TurnRecord turnRecord){
+        int currentWealth = playerWealth.get(current_player);
+        playerWealth.put(current_player, currentWealth - turnRecord.getIncome());
+    }
+
+    /**
+     * @brief Get the other player
+     *
+     * @param current_player The first player
+     *
+     * @return The otherp player
+     */
+    public String swapPlayers(String current_player){
+        if (current_player.equals("P1")) {
+            return "P2";
+        } else {
+            return "P1";
+        }
     }
 
     /**
@@ -972,6 +1144,9 @@ public class Game {
         int attack_damage = computeAttackDamage(attacker, attacker_position, target_position);
         defender.takeDamage(attack_damage);
 
+        // Record the damage dealt
+        replay.getCurrentTurn().addDamageRecord(defender.getPosition(), attack_damage);
+
         System.out.println(
                 "[COMBAT] " + attacker.getUnitType().getName()
                 + " attacks " + defender.getUnitType().getName()
@@ -985,6 +1160,9 @@ public class Game {
 
             // Mark the attacking unit as already played
             attacker.setAlreadyPlayed(true);
+
+            // Record the destroyed unit
+            replay.getCurrentTurn().addDestroyedUnit(defender);
 
             // TODO: Later add a dedicated attack event once the observer/game event
             //       structure for combat is expanded
@@ -1000,6 +1178,10 @@ public class Game {
             int counter_damage = computeAttackDamage(defender, target_position, attacker_position);  
             attacker.takeDamage(counter_damage);
 
+
+            // Record the damage dealt
+            replay.getCurrentTurn().addDamageRecord(attacker.getPosition(), counter_damage);
+
             System.out.println(
                     "[COMBAT] " + defender.getUnitType().getName()
                     + " counterattacks " + attacker.getUnitType().getName()
@@ -1011,6 +1193,9 @@ public class Game {
             if (attacker.isDestroyed()) {
                 System.out.println("[COMBAT] " + attacker.getUnitType().getName() + " destroyed.");
                 this.units_map.remove(attacker_position);
+
+                // Record the destroyed unit
+                replay.getCurrentTurn().addDestroyedUnit(attacker);
             }
         }
 
@@ -1218,11 +1403,65 @@ public class Game {
     }
 
     /**
+     * @brief Setter of the replay
+     *
+     * @param replay The new replay
+     */
+    public void setReplay(Replay replay) {
+        this.replay = replay;
+    }
+
+    /**
      * @brief Get an owned building at a specific position
      *
      * @return A building at the desired position
      */
     public Building getBuilding(Position position){
         return buildings.get(position);
+    }
+
+    /**
+     * @brief Get the replay of the current game
+     *
+     * @return Replay of the game
+     */
+    public Replay getReplay() {
+        return replay;
+    }
+
+    /**
+     * @brief Get the game map
+     *
+     * @return The game map
+     */
+    public GameMap getGameMap() {
+        return gameMap;
+    }
+
+    /**
+     * @brief Get the map of all units in the game
+     *
+     * @return Map of units
+     */
+    public Map<Position, Unit> getUnits_map() {
+        return units_map;
+    }
+
+    /**
+     * @brief Check if the game is in replay mode
+     *
+     * @return True if in replay mode
+     */
+    public boolean isReplayMode() {
+        return replayMode;
+    }
+
+    /**
+     * @brief Set the replay mode of the game
+     *
+     * @param replayMode new replay mode boolean
+     */
+    public void setReplayMode(boolean replayMode) {
+        this.replayMode = replayMode;
     }
 }

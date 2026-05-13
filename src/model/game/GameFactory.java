@@ -7,8 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import model.map.MapElement;
-import model.map.Overlay;
-import model.map.Terrain;
+import model.map.Serializable.Overlay;
+import model.map.Serializable.Terrain;
+import replay.Replay;
 
 /**
  * @class GameFactory
@@ -151,7 +152,12 @@ public class GameFactory {
 
         // Then load the unit placements into it
         UnitPlacementLoader.loadUnits(game, unit_file);
+
+        // Set the initial ownership of buildings
         game.setOwnership();
+
+        // Create a new replay for the game
+        game.setReplay(new Replay(game));
 
         return game;
     }

@@ -2,7 +2,7 @@ package model.unit;
 
 import java.util.List;
 
-import model.map.Terrain;
+import model.map.Serializable.Terrain;
 
 public enum UnitType {
     // List of the types and their names and values of the UnitType

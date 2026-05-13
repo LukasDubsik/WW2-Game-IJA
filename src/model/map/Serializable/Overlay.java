@@ -1,4 +1,6 @@
-package model.map;
+package model.map.Serializable;
+
+import java.io.Serializable;
 
 /**
  * @enum TileOverlay
@@ -7,7 +9,7 @@ package model.map;
  *        IMPORTANT:
  *        These are modifiers on top of the base terrain, not replacement terrain types.
  */
-public enum Overlay {
+public enum Overlay implements Serializable {
     NONE("None", "N", 0, 0, 0),
     TRENCH("Trench", "T", 2, 1, 2),
     BARBED_WIRE("Barbed Wire", "B", 0, 1, 2),

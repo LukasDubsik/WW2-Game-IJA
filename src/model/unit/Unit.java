@@ -2,7 +2,9 @@ package model.unit;
 
 import model.map.Position;
 
-public class Unit {
+import java.io.Serializable;
+
+public class Unit implements Serializable {
 
     // Values of the class
     private UnitType unitType; ///< the type of the unit

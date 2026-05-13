@@ -1,5 +1,8 @@
 package model.map;
 
+import model.map.Serializable.Overlay;
+import model.map.Serializable.Terrain;
+
 public class MapElement {
 
     private final Overlay overlay; ///< Holder of the Overlay enum
