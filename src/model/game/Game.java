@@ -33,6 +33,8 @@ public class Game {
 
     private Replay replay; ///< The replay of that game
     private boolean replayMode; ///< If the game is in replay mode
+
+    private Position selectedFactory;
     
     /**
      * @brief The constructor of the Game class
@@ -468,6 +470,9 @@ public class Game {
                 // Revert the damage dealt in the replay
                 revertDamage(turnRecord, false);
 
+                // Revert units purchased
+                revertPurchasedUnits(turnRecord, false);
+
                 replay.advanceTurn();
             }
             replayMode = !replay.isAtEnd();
@@ -573,6 +578,10 @@ public class Game {
                 revertDamage(currentTurnRecord, true);
                 currentTurnRecord.getDamageList().clear();
 
+                // Revert purchased units
+                revertPurchasedUnits(currentTurnRecord, true);
+                currentTurnRecord.getUnitsPurchased().clear();
+
                 // Restore all moves in current turn
                 revertMoves(currentTurnRecord, true);
                 currentTurnRecord.getMoves().clear();
@@ -603,6 +612,9 @@ public class Game {
 
         // Restore all damage dealt that turn
         revertDamage(turnRecord, true);
+
+        // Revert purchased units
+        revertPurchasedUnits(turnRecord, true);
 
         // Revert the moves
         revertMoves(turnRecord, true);
@@ -716,6 +728,29 @@ public class Game {
                 unit.takeDamage(damageRecord.damage());
                 if(unit.isDestroyed())
                     this.units_map.remove(unit.getPosition());
+            }
+        }
+    }
+
+    /**
+     * @brief Revert the units purchased that turn
+     *
+     * @param turnRecord Turn record to revert
+     * @param revert revert or advance
+     */
+    private void revertPurchasedUnits(TurnRecord turnRecord, boolean revert){
+        ArrayList<UnitPurchaseRecord> unitsPurchased = turnRecord.getUnitsPurchased();
+        for(int i = unitsPurchased.size() - 1; i >= 0; i--){
+            UnitPurchaseRecord unitPurchased = unitsPurchased.get(i);
+
+            if(revert) {
+                units_map.remove(unitPurchased.position());
+                int newWealth = playerWealth.get(this.current_player) + unitPurchased.unitType().getPrice();
+                playerWealth.put(this.current_player, newWealth);
+            }
+            else{
+                selectedFactory = unitPurchased.position();
+                buyUnit(unitPurchased.unitType());
             }
         }
     }
@@ -1463,5 +1498,49 @@ public class Game {
      */
     public void setReplayMode(boolean replayMode) {
         this.replayMode = replayMode;
+    }
+
+    /**
+     * @brief Set the currently selected factory
+     *
+     * @param selectedFactory position of the currently selected factory
+     */
+    public void setSelectedFactory(Position selectedFactory) {
+        this.selectedFactory = selectedFactory;
+    }
+
+    /**
+     * @brief Check if a player can afford a specific unit
+     *
+     * @param player The player that should afford the unit
+     * @param unitType The unit type that the player should afford
+     *
+     * @return true if the player can afford the unit
+     */
+    public boolean canAffor(String player, UnitType unitType){
+        return unitType.getPrice() <= playerWealth.get(player);
+    }
+
+    /**
+     * @brief Create the unit and update the player wealth
+     *
+     * @param unitType The unit the player wants to buy
+     */
+    public void buyUnit(UnitType unitType){
+
+        if(!canAffor(this.current_player, unitType))
+            return;
+
+        if(getUnit(selectedFactory) != null)
+            return;
+
+        Unit unit = new Unit(unitType, this.current_player, selectedFactory);
+        unit.setMovedThisTurn(true);
+        unit.setAlreadyPlayed(true);
+
+        units_map.put(selectedFactory, unit);
+        playerWealth.put(this.current_player, playerWealth.get(this.current_player) - unitType.getPrice());
+
+        replay.getCurrentTurn().addPurchasedUnit(unitType, selectedFactory);
     }
 }

@@ -17,12 +17,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import model.game.Game;
 import model.game.GameFactory;
@@ -32,6 +27,7 @@ import model.map.Position;
 import model.map.Serializable.Terrain;
 import model.unit.ArmamentType;
 import model.unit.Unit;
+import model.unit.UnitType;
 import replay.Replay;
 import view.board.GameCanvas;
 
@@ -70,6 +66,28 @@ public class StartApp extends Application {
         InfoRow building_owner; ///< Owner of the building
         InfoRow building_integrity; ///< Integrity of building
 
+        Label buy_section; ///< Section for shop
+
+        // Grid panes for each player
+        GridPane factory_shop_grid_P1;
+        GridPane factory_shop_grid_P2;
+
+        // Buttons for P1 factory shop
+        Button WEHRMACHT_RIFLE_SQUAD;
+        Button GRENADIER_SQUAD;
+        Button MG42_TEAM;
+        Button SDKFZ_251_HALFTRACK;
+        Button PANZER_IV_AUSF_J;
+        Button SDKFZ_234_2_PUMA;
+
+        // Buttons for P2 factory shop
+        Button SOVIET_ASSAULT_SAPPER_SQUAD;
+        Button ZIS_3_FIELD_GUN;
+        Button DP27_TEAM;
+        Button IS_1_HEAVY_TANK;
+        Button M3_HALFTRACK;
+        Button BA_64_ARMORED_CAR;
+
         Label unit_section; ///< Unit section title
         InfoRow owner_row; ///< Unit owner row
         InfoRow status_row; ///< Unit state row
@@ -98,8 +116,14 @@ public class StartApp extends Application {
         // Load the scenario -> map + starting units
         game = GameFactory.createGame(map_path, units_path);
 
+        // Label holding the current wealth of each player
+        Label economyLabel = new Label();
+        economyLabel.setStyle("-fx-text-fill: #FFD700; -fx-font-size: 16px; -fx-font-weight: bold;");
+        updateEconomyLabel(economyLabel, game);
+
         // Create the prettier side information panel
         InfoPanelWidgets info_panel = createInfoPanel();
+        setFactoryButtonsEvents(info_panel, game, economyLabel);
         clearInfoPanel(info_panel);
 
         // Label holding the currently active turn/player
@@ -111,11 +135,6 @@ public class StartApp extends Application {
         Label replayLabel = new Label();
         replayLabel.setStyle("-fx-text-fill: red; -fx-font-size: 14px;");
         updateReplayLabel(replayLabel, game);
-
-        // Label holding the current wealth of each player
-        Label economyLabel = new Label();
-        economyLabel.setStyle("-fx-text-fill: #FFD700; -fx-font-size: 16px; -fx-font-weight: bold;");
-        updateEconomyLabel(economyLabel, game);
 
         // Create the game canvas
         canvas = new GameCanvas(game, 80, 70);
@@ -254,14 +273,7 @@ public class StartApp extends Application {
 
         // Button to open a new replay
         Button openReplayButton = new Button("Open replay");
-        openReplayButton.setStyle(
-                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
-                        + "-fx-text-fill: white;"
-                        + "-fx-font-weight: bold;"
-                        + "-fx-background-radius: 8;"
-                        + "-fx-padding: 8 16 8 16;"
-        );
-
+        setDefaultButtonFont(openReplayButton);
         openReplayButton.setOnAction(event -> {
             CompletableFuture.runAsync(new Runnable() {
                 @Override
@@ -286,19 +298,11 @@ public class StartApp extends Application {
                     });
                 }
             });
-
-
         });
 
         // Button to save the replay of the current game
         Button saveReplayButton = new Button("Save replay");
-        saveReplayButton.setStyle(
-                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
-                        + "-fx-text-fill: white;"
-                        + "-fx-font-weight: bold;"
-                        + "-fx-background-radius: 8;"
-                        + "-fx-padding: 8 16 8 16;"
-        );
+        setDefaultButtonFont(saveReplayButton);
         saveReplayButton.setOnAction(event -> {
             CompletableFuture.runAsync(new Runnable() {
                 @Override
@@ -316,13 +320,7 @@ public class StartApp extends Application {
 
         // Button to revert the previouse turn
         Button prevTurnButton = new Button("Prev turn");
-        prevTurnButton.setStyle(
-                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
-                        + "-fx-text-fill: white;"
-                        + "-fx-font-weight: bold;"
-                        + "-fx-background-radius: 8;"
-                        + "-fx-padding: 8 16 8 16;"
-        );
+        setDefaultButtonFont(prevTurnButton);
         prevTurnButton.setOnAction(event -> {
             game.prevTurn();
 
@@ -344,14 +342,7 @@ public class StartApp extends Application {
 
         // Button for shifting to the next turn
         Button nextTurnButton = new Button("Next turn");
-        nextTurnButton.setStyle(
-                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
-                        + "-fx-text-fill: white;"
-                        + "-fx-font-weight: bold;"
-                        + "-fx-background-radius: 8;"
-                        + "-fx-padding: 8 16 8 16;"
-        );
-
+        setDefaultButtonFont(nextTurnButton);
         nextTurnButton.setOnAction(event -> {
             // Move the game to the next turn
             game.nextTurn();
@@ -475,6 +466,9 @@ public class StartApp extends Application {
         panel.description_row.value.setStyle("-fx-text-fill: #d5d9e0; -fx-font-size: 12px;");
         panel.description_row.value.setWrapText(true);
 
+        // Create buttons for factory shop
+        createFactoryButtons(panel);
+
         panel.content = new VBox(
                 10,
                 panel.title_label,
@@ -488,6 +482,9 @@ public class StartApp extends Application {
                 panel.building_section,
                 panel.building_owner.box,
                 panel.building_integrity.box,
+                panel.buy_section,
+                panel.factory_shop_grid_P1,
+                panel.factory_shop_grid_P2,
                 panel.unit_section,
                 panel.owner_row.box,
                 panel.status_row.box,
@@ -587,6 +584,7 @@ public class StartApp extends Application {
         setSectionVisible(panel.tile_section, false);
         setSectionVisible(panel.unit_section, false);
         setSectionVisible(panel.building_section, false);
+        setSectionVisible(panel.buy_section, false);
         setSectionVisible(panel.description_section, true);
         setRowValue(panel.terrain_row, null);
         setRowValue(panel.overlay_row, null);
@@ -600,6 +598,11 @@ public class StartApp extends Application {
         setRowValue(panel.movement_row, null);
         setRowValue(panel.price_row, null);
         setRowValue(panel.armaments_row, null);
+
+        panel.factory_shop_grid_P1.setVisible(false);
+        panel.factory_shop_grid_P1.setManaged(false);
+        panel.factory_shop_grid_P2.setVisible(false);
+        panel.factory_shop_grid_P2.setManaged(false);
 
         panel.hp_box.setManaged(false);
         panel.hp_box.setVisible(false);
@@ -641,6 +644,34 @@ public class StartApp extends Application {
         if(Terrain.isBuilding(terrain)) {
             setSectionVisible(panel.building_section, true);
 
+            //If factory then show the shop
+            if(terrain == Terrain.FACTORY) {
+                Building building = game.getBuilding(position);
+
+                if(building != null && building.getOwner().equals("P1") && game.getCurrentPlayer().equals("P1")){
+                    setSectionVisible(panel.buy_section, true);
+                    setButtonsAffodability(panel, game, "P1");
+                    panel.factory_shop_grid_P1.setVisible(true);
+                    panel.factory_shop_grid_P1.setManaged(true);
+                    game.setSelectedFactory(position);
+                }
+                else if (building != null && building.getOwner().equals("P2") && game.getCurrentPlayer().equals("P2")){
+                    setSectionVisible(panel.buy_section, true);
+                    setButtonsAffodability(panel, game, "P2");
+                    panel.factory_shop_grid_P2.setVisible(true);
+                    panel.factory_shop_grid_P2.setManaged(true);
+                    game.setSelectedFactory(position);
+                }
+
+            }
+            else {
+                setSectionVisible(panel.buy_section, false);
+                panel.factory_shop_grid_P1.setVisible(false);
+                panel.factory_shop_grid_P1.setManaged(false);
+                panel.factory_shop_grid_P2.setVisible(false);
+                panel.factory_shop_grid_P2.setManaged(false);
+            }
+
             //If building is owned by a player show the owner and integrity
             if(game.getBuilding(position) != null){
                 Building building = game.getBuilding(position);
@@ -654,6 +685,11 @@ public class StartApp extends Application {
         }
         else {
             setSectionVisible(panel.building_section, false);
+            setSectionVisible(panel.buy_section, false);
+            panel.factory_shop_grid_P1.setVisible(false);
+            panel.factory_shop_grid_P1.setManaged(false);
+            panel.factory_shop_grid_P2.setVisible(false);
+            panel.factory_shop_grid_P2.setManaged(false);
             setRowValue(panel.building_owner, null);
             setRowValue(panel.building_integrity, null);
         }
@@ -1098,5 +1134,226 @@ public class StartApp extends Application {
      */
     public Game getGame() {
         return game;
+    }
+
+    /**
+     * @brief Set the font for a default button
+     *
+     * @param button Button to be changed
+     */
+    private void setDefaultButtonFont(Button button){
+        button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+    }
+
+    /**
+     * @brief Set the initial font of a shop button
+     *
+     * @param button Button to be changed
+     */
+    private static void setInitialFactoryButtonFont(Button button){
+
+        setButtonFontAffordable(button, false);
+
+        button.setPrefWidth(85);
+        button.setPrefHeight(40);
+
+        button.setWrapText(true);
+        button.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+    }
+
+    /**
+     * @brief Set the shop button to grey if not affordable or to blue if affordable
+     *
+     * @param button Button to be changed
+     * @param affordable boolean if the unit is affordable
+     */
+    private static void setButtonFontAffordable(Button button, boolean affordable){
+        if(affordable){
+            button.setStyle(
+                    "-fx-background-color: linear-gradient(to bottom, #395c8c, #1f3657);"
+                            + "-fx-text-fill: #e8f0fe;"
+                            + "-fx-font-weight: bold;"
+                            + "-fx-font-size: 9px;"
+                            + "-fx-background-radius: 6;"
+                            + "-fx-padding: 4 2 4 2;"
+                            + "-fx-border-color: #5c85c2;"
+                            + "-fx-border-width: 1;"
+                            + "-fx-border-radius: 5;"
+            );
+        }
+        else{
+            button.setStyle(
+                    "-fx-background-color: linear-gradient(to bottom, #596575, #363f4a);"
+                            + "-fx-text-fill: #9aa6b8;"
+                            + "-fx-font-weight: bold;"
+                            + "-fx-font-size: 9px;"
+                            + "-fx-background-radius: 6;"
+                            + "-fx-padding: 4 2 4 2;"
+            );
+        }
+
+    }
+
+    /**
+     * @brief Create buttons for factory shop
+     *
+     * @param panel Side panel of all widgets
+     */
+    private static void createFactoryButtons(InfoPanelWidgets panel){
+        panel.buy_section = makeSectionLabel("Buy units");
+
+        panel.WEHRMACHT_RIFLE_SQUAD = new Button("Wehrmacht rifle squad");
+        panel.GRENADIER_SQUAD = new Button("Grenadier squad");
+        panel.MG42_TEAM = new Button("MG42 team");
+        panel.SDKFZ_251_HALFTRACK = new Button("SDKFZ 251 halftrack");
+        panel.PANZER_IV_AUSF_J = new Button("Panzer IV AUSF J");
+        panel.SDKFZ_234_2_PUMA = new Button("SDKFZ 234 2 puma");
+        panel.SOVIET_ASSAULT_SAPPER_SQUAD = new Button("Soviet assault sapper squad");
+        panel.ZIS_3_FIELD_GUN = new Button("ZIS 3 field gun");
+        panel.DP27_TEAM = new Button("DP27 team");
+        panel.IS_1_HEAVY_TANK = new Button("IS 1 heavy tank");
+        panel.M3_HALFTRACK = new Button("M3 halftrack");
+        panel.BA_64_ARMORED_CAR = new Button("BA 64 armored car");
+
+        setInitialFactoryButtonFont(panel.WEHRMACHT_RIFLE_SQUAD);
+        setInitialFactoryButtonFont(panel.GRENADIER_SQUAD);
+        setInitialFactoryButtonFont(panel.MG42_TEAM);
+        setInitialFactoryButtonFont(panel.SDKFZ_251_HALFTRACK);
+        setInitialFactoryButtonFont(panel.PANZER_IV_AUSF_J);
+        setInitialFactoryButtonFont(panel.SDKFZ_234_2_PUMA);
+        setInitialFactoryButtonFont(panel.SOVIET_ASSAULT_SAPPER_SQUAD);
+        setInitialFactoryButtonFont(panel.DP27_TEAM);
+        setInitialFactoryButtonFont(panel.ZIS_3_FIELD_GUN);
+        setInitialFactoryButtonFont(panel.IS_1_HEAVY_TANK);
+        setInitialFactoryButtonFont(panel.M3_HALFTRACK);
+        setInitialFactoryButtonFont(panel.BA_64_ARMORED_CAR);
+
+        // P1 shop
+        panel.factory_shop_grid_P1 = new GridPane();
+        panel.factory_shop_grid_P1.setHgap(5);
+        panel.factory_shop_grid_P1.setVgap(5);
+        panel.factory_shop_grid_P1.add(panel.WEHRMACHT_RIFLE_SQUAD, 0, 0);
+        panel.factory_shop_grid_P1.add(panel.GRENADIER_SQUAD, 1, 0);
+        panel.factory_shop_grid_P1.add(panel.MG42_TEAM, 2, 0);
+        panel.factory_shop_grid_P1.add(panel.SDKFZ_251_HALFTRACK, 0, 1);
+        panel.factory_shop_grid_P1.add(panel.PANZER_IV_AUSF_J, 1, 1);
+        panel.factory_shop_grid_P1.add(panel.SDKFZ_234_2_PUMA, 2, 1);
+        panel.factory_shop_grid_P1.setVisible(false);
+        panel.factory_shop_grid_P1.setManaged(false);
+
+        // P2 shop
+        panel.factory_shop_grid_P2 = new GridPane();
+        panel.factory_shop_grid_P2.setHgap(5);
+        panel.factory_shop_grid_P2.setVgap(5);
+        panel.factory_shop_grid_P2.add(panel.SOVIET_ASSAULT_SAPPER_SQUAD, 0, 0);
+        panel.factory_shop_grid_P2.add(panel.DP27_TEAM, 1, 0);
+        panel.factory_shop_grid_P2.add(panel.ZIS_3_FIELD_GUN, 2, 0);
+        panel.factory_shop_grid_P2.add(panel.IS_1_HEAVY_TANK, 0, 1);
+        panel.factory_shop_grid_P2.add(panel.M3_HALFTRACK, 1, 1);
+        panel.factory_shop_grid_P2.add(panel.BA_64_ARMORED_CAR, 2, 1);
+        panel.factory_shop_grid_P2.setVisible(false);
+        panel.factory_shop_grid_P2.setManaged(false);
+    }
+
+    /**
+     * @brief Set the action events for all factory shop buttons and update the economy label
+     *
+     * @param panel Side panel of all widgets
+     * @param game The current game
+     * @param economyLabel Label to be updated
+     */
+    private void setFactoryButtonsEvents(InfoPanelWidgets panel, Game game, Label economyLabel){
+        panel.WEHRMACHT_RIFLE_SQUAD.setOnAction(event ->{
+            game.buyUnit(UnitType.WEHRMACHT_RIFLE_SQUAD);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.GRENADIER_SQUAD.setOnAction(event ->{
+            game.buyUnit(UnitType.GRENADIER_SQUAD);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.MG42_TEAM.setOnAction(event ->{
+            game.buyUnit(UnitType.MG42_TEAM);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.SDKFZ_251_HALFTRACK.setOnAction(event ->{
+            game.buyUnit(UnitType.SDKFZ_251_HALFTRACK);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.PANZER_IV_AUSF_J.setOnAction(event ->{
+            game.buyUnit(UnitType.PANZER_IV_AUSF_J);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.SDKFZ_234_2_PUMA.setOnAction(event ->{
+            game.buyUnit(UnitType.SDKFZ_234_2_PUMA);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.SOVIET_ASSAULT_SAPPER_SQUAD.setOnAction(event ->{
+            game.buyUnit(UnitType.SOVIET_ASSAULT_SAPPER_SQUAD);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.ZIS_3_FIELD_GUN.setOnAction(event ->{
+            game.buyUnit(UnitType.ZIS_3_FIELD_GUN);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.DP27_TEAM.setOnAction(event ->{
+            game.buyUnit(UnitType.DP27_TEAM);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.IS_1_HEAVY_TANK.setOnAction(event ->{
+            game.buyUnit(UnitType.IS_1_HEAVY_TANK);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.M3_HALFTRACK.setOnAction(event ->{
+            game.buyUnit(UnitType.M3_HALFTRACK);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+        panel.BA_64_ARMORED_CAR.setOnAction(event ->{
+            game.buyUnit(UnitType.BA_64_ARMORED_CAR);
+            canvas.draw();
+            updateEconomyLabel(economyLabel, game);
+        });
+    }
+
+    /**
+     * @brief Set the font of affordability for each factory shop button
+     *
+     * @param panel Side panel of all widgets
+     * @param game The current game
+     * @param player The current player
+     */
+    private static void setButtonsAffodability(InfoPanelWidgets panel, Game game, String player){
+        if(player.equals("P1")){
+            setButtonFontAffordable(panel.WEHRMACHT_RIFLE_SQUAD, game.canAffor(player, UnitType.WEHRMACHT_RIFLE_SQUAD));
+            setButtonFontAffordable(panel.GRENADIER_SQUAD, game.canAffor(player, UnitType.GRENADIER_SQUAD));
+            setButtonFontAffordable(panel.MG42_TEAM, game.canAffor(player, UnitType.MG42_TEAM));
+            setButtonFontAffordable(panel.SDKFZ_251_HALFTRACK, game.canAffor(player, UnitType.SDKFZ_251_HALFTRACK));
+            setButtonFontAffordable(panel.PANZER_IV_AUSF_J, game.canAffor(player, UnitType.PANZER_IV_AUSF_J));
+            setButtonFontAffordable(panel.SDKFZ_234_2_PUMA, game.canAffor(player, UnitType.SDKFZ_234_2_PUMA));
+        }
+        else{
+            setButtonFontAffordable(panel.SOVIET_ASSAULT_SAPPER_SQUAD, game.canAffor(player, UnitType.SOVIET_ASSAULT_SAPPER_SQUAD));
+            setButtonFontAffordable(panel.DP27_TEAM, game.canAffor(player, UnitType.DP27_TEAM));
+            setButtonFontAffordable(panel.ZIS_3_FIELD_GUN, game.canAffor(player, UnitType.ZIS_3_FIELD_GUN));
+            setButtonFontAffordable(panel.IS_1_HEAVY_TANK, game.canAffor(player, UnitType.IS_1_HEAVY_TANK));
+            setButtonFontAffordable(panel.M3_HALFTRACK, game.canAffor(player, UnitType.M3_HALFTRACK));
+            setButtonFontAffordable(panel.BA_64_ARMORED_CAR, game.canAffor(player, UnitType.BA_64_ARMORED_CAR));
+        }
     }
 }

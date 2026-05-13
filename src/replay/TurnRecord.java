@@ -2,6 +2,7 @@ package replay;
 
 import model.map.Position;
 import model.unit.Unit;
+import model.unit.UnitType;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ public class TurnRecord implements Serializable {
     private final ArrayList<BuildingIntegrityRecord> birList = new ArrayList<>(); ///< List of all building integrity and owner changes
     private final ArrayList<DamageRecord> damageList = new ArrayList<>(); ///< List of all damages dealt that round
     private final ArrayList<Unit> unitsDestroyed = new ArrayList<>(); ///< List of all destroyed units in that turn
+    private final ArrayList<UnitPurchaseRecord> unitsPurchased = new ArrayList<>(); /// < List of all puchased that turn
 
     private int income = 0; ///< Record of the income the current player got for that turn
 
@@ -32,6 +34,7 @@ public class TurnRecord implements Serializable {
         birList.addAll(turnRecord.birList);
         damageList.addAll(turnRecord.damageList);
         unitsDestroyed.addAll(turnRecord.unitsDestroyed);
+        unitsPurchased.addAll(turnRecord.unitsPurchased);
         this.income = turnRecord.income;
     }
 
@@ -138,5 +141,25 @@ public class TurnRecord implements Serializable {
         birList.clear();
         damageList.clear();
         unitsDestroyed.clear();
+        unitsPurchased.clear();
+    }
+
+    /**
+     * @brief Adds a new record of a purchased unit
+     *
+     * @param unitType Purchased type of unit
+     * @param position Position of the factory
+     */
+    public void addPurchasedUnit(UnitType unitType, Position position){
+        unitsPurchased.add(new UnitPurchaseRecord(unitType, position));
+    }
+
+    /**
+     * @brief Get the list of purchased units in that turn
+     *
+     * @return List of all purchased units
+     */
+    public ArrayList<UnitPurchaseRecord> getUnitsPurchased() {
+        return unitsPurchased;
     }
 }
