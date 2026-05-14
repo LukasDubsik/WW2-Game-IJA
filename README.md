@@ -179,7 +179,7 @@ Needed:
 - stepping forward/backward
 - resuming normal game from replay state
 
-### D. Bot
+### D. bot
 Needed:
 - at least one dummy bot that can play legally through engine calls only
 - optionally later tactical bot

@@ -3,6 +3,7 @@ package replay;
 import model.map.Position;
 import model.unit.Unit;
 import model.unit.UnitType;
+import replay.records.*;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 public class TurnRecord implements Serializable {
 
     private final ArrayList<BuildingIntegrityRecord> birList = new ArrayList<>(); ///< List of all building integrity and owner changes
+    private final ArrayList<RepairRecord> repairList = new ArrayList<>(); ///< List of all repaired units
     private final ArrayList<Action> actionList = new ArrayList<>(); ///< List of all actions the player has made this current turn
     private IncomeRecord incomeRecord; ///< Record of the income the current player got for that turn
 
@@ -29,6 +31,7 @@ public class TurnRecord implements Serializable {
         birList.addAll(turnRecord.birList);
         this.incomeRecord = turnRecord.incomeRecord;
         this.actionList.addAll(turnRecord.actionList);
+        this.repairList.addAll(turnRecord.repairList);
     }
 
     /**
@@ -105,6 +108,7 @@ public class TurnRecord implements Serializable {
     public void clearRecords() {
         birList.clear();
         actionList.clear();
+        repairList.clear();
     }
 
     /**
@@ -124,5 +128,24 @@ public class TurnRecord implements Serializable {
      */
     public ArrayList<Action> getActionList() {
         return actionList;
+    }
+
+    /**
+     * @brief Get the list of all repaired units
+     *
+     * @return The list of repaired units
+     */
+    public ArrayList<RepairRecord> getRepairList() {
+        return repairList;
+    }
+
+    /**
+     * @brief Adds a new record of a purchased unit
+     *
+     * @param position Position of the factory
+     * @param cost Cost of the repair
+     */
+    public void addRepairedUnit(Position position, int cost){
+        repairList.add(new RepairRecord(position, cost));
     }
 }

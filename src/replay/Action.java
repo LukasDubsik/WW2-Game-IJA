@@ -2,6 +2,9 @@ package replay;
 
 import model.map.Position;
 import model.unit.Unit;
+import replay.records.DamageRecord;
+import replay.records.MoveRecord;
+import replay.records.UnitPurchaseRecord;
 
 import java.io.Serializable;
 

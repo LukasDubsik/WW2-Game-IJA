@@ -2,7 +2,7 @@ package model.game;
 
 import java.util.*;
 
-import Bot.Bot;
+import bot.Bot;
 import app.StartApp;
 import model.map.*;
 import model.map.Serializable.GameMap;
@@ -12,6 +12,7 @@ import model.unit.TargetClass;
 import model.unit.Unit;
 import model.unit.UnitType;
 import replay.*;
+import replay.records.*;
 
 /**
  * @class Game
@@ -529,6 +530,31 @@ public class Game {
             }
         }
 
+        // Repair units
+        for(Position position : units_map.keySet()){
+            Unit unit = units_map.get(position);
+
+            // Check if unit should be repaired
+            if(!unit.getOwner().equals(this.current_player))
+                continue;
+
+            if(unit.getCurrentHp() > 80)
+                continue;
+
+            if(unit.isDestroyed())
+                continue;
+
+            // Repair unit
+            int ownerWealth = playerWealth.get(unit.getOwner());
+            int repairCost = (int) (unit.getUnitType().getPrice() / 10.0);
+            if(ownerWealth >= repairCost){
+                unit.setCurrentHp(unit.getCurrentHp() + 20);
+                playerWealth.put(unit.getOwner(), playerWealth.get(unit.getOwner()) - repairCost);
+                if(!replayMode)
+                    replay.getCurrentTurn().addRepairedUnit(position, repairCost);
+            }
+        }
+
         // Reset capture progress
         buildings.forEach((position, building) -> {
             if(building.isFull())
@@ -654,14 +680,17 @@ public class Game {
             return;
         }
 
-        // Revert all playerActions
-        revertActions(turnRecord, true);
+        // Restore the previouse player wealth
+        revertPlayerWealth(turnRecord);
 
         // Revert the building changes
         revertBuildingChanges(turnRecord);
 
-        // Restore the previouse player wealth
-        revertPlayerWealth(turnRecord);
+        // Revert repairs
+        revertRepairs(turnRecord);
+
+        // Revert all playerActions
+        revertActions(turnRecord, true);
 
         // Notify the observers that the game changed
         notifyObservers(new GameEvent());
@@ -735,6 +764,26 @@ public class Game {
                         throw new RuntimeException("Replay is corrupted " + unitPurchaseRecord.unitType() + ", at " + unitPurchaseRecord.position() + ", by " + this.current_player);
                 }
             }
+        }
+    }
+
+    /**
+     * @brief Revert the repairs made that turn
+     *
+     * @param turnRecord Turn record to revert
+     */
+    private void revertRepairs(TurnRecord turnRecord){
+        ArrayList<RepairRecord> repairList = turnRecord.getRepairList();
+
+        for(int i = repairList.size() - 1; i >= 0; i--){
+            RepairRecord repairRecord = repairList.get(i);
+
+            Unit unit = getUnit(repairRecord.position());
+            if(unit == null)
+                throw new RuntimeException("Failed to get a unit to repair at " + repairRecord.position());
+
+            unit.setCurrentHp(unit.getCurrentHp() - 20);
+            playerWealth.put(unit.getOwner(), playerWealth.get(unit.getOwner()) + repairRecord.cost());
         }
     }
 

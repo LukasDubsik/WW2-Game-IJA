@@ -1,4 +1,4 @@
-package replay;
+package replay.records;
 
 import model.map.Position;
 

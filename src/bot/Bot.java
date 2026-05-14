@@ -1,4 +1,4 @@
-package Bot;
+package bot;
 
 import app.StartApp;
 import javafx.application.Platform;
