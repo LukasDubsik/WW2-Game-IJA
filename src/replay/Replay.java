@@ -1,7 +1,7 @@
 package replay;
 
 import model.game.Game;
-import model.map.Position;
+import model.map.Serializable.Position;
 import model.map.Serializable.GameMap;
 import model.unit.Unit;
 

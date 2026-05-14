@@ -18,7 +18,7 @@ import javafx.scene.text.Font;
 import javafx.util.Duration;
 import model.game.Game;
 import model.map.Serializable.Overlay;
-import model.map.Position;
+import model.map.Serializable.Position;
 import model.map.Serializable.Terrain;
 import model.unit.Unit;
 

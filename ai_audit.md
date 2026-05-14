@@ -16,6 +16,7 @@ AI byla používána především:
 - pro kostry některých podpůrných tříd a enumů,
 - pro pomoc s formulací některých textových a prezentačních částí,
 - pro část grafických assetů nebo podkladů, které byly následně ručně vybírány, upravovány a zasazovány do projektu.
+- generace Javadoc pro třídu `Bot.class`
 
 Naopak bez použití AI byly řešeny zejména:
 - celková koncepce hry a architektura projektu,
@@ -23,6 +24,7 @@ Naopak bez použití AI byly řešeny zejména:
 - hlavní logika pohybu, tahového systému a combat flow,
 - rozhodnutí o podobě map, scénářů, jednotek, zbraní a herních mechanik,
 - ruční ladění hodnot jednotek, armamentů, terénů a UX detailů,
+- architektura a logika Replay a Bota
 - finální integrace všech částí do funkčního celku.
 
 ---
@@ -96,6 +98,16 @@ Naopak bez použití AI byly řešeny zejména:
 * **Úprava studentem:**
   Celkový návrh mechanik, jejich pořadí, návaznosti, gameplay význam i finální funkční propojení byly vytvořeny a laděny ručně. AI zde nesloužila jako autor výsledné mechaniky, ale jako pomocník při implementaci jednotlivých částí.
 * **Míra generování:** nízká až střední v jednotlivých blocích, nízká v konečném systému jako celku.
+
+---
+
+## 7. Generace Javadoc pro třídu Bot
+* **Nástroj:** Gemini
+* **Datum:** Těsně před přídáním Bota
+* **Použití:** 
+  AI vygenerovala dokumentaci pro třídu Bot
+* **Uprava studentem:** Kontrola správnosti dokumentace
+* **Míra generování:** Vysoká pro každou metodu
 
 ---
 

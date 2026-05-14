@@ -1,6 +1,6 @@
 package model.unit;
 
-import model.map.Position;
+import model.map.Serializable.Position;
 
 import java.io.Serializable;
 

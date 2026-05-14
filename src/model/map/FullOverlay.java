@@ -1,6 +1,7 @@
 package model.map;
 
 import model.map.Serializable.Overlay;
+import model.map.Serializable.Position;
 
 /**
  * @class FullOverlay

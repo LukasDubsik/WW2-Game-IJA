@@ -7,6 +7,7 @@ import app.StartApp;
 import model.map.*;
 import model.map.Serializable.GameMap;
 import model.map.Serializable.Overlay;
+import model.map.Serializable.Position;
 import model.map.Serializable.Terrain;
 import model.unit.TargetClass;
 import model.unit.Unit;

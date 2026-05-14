@@ -4,7 +4,7 @@ import app.StartApp;
 import javafx.application.Platform;
 import model.game.Game;
 import model.map.Building;
-import model.map.Position;
+import model.map.Serializable.Position;
 import model.map.Serializable.Terrain;
 import model.unit.Unit;
 import model.unit.UnitType;
@@ -550,7 +550,7 @@ public class Bot {
     }
 
     /**
-     * @brief Retrieves a faction-specific list of available unit types to train.
+     * @brief Retrieves a faction-specific list of available unit types to buy.
      *
      * @param player The string identifier of the player ("P1" or "P2")
      *

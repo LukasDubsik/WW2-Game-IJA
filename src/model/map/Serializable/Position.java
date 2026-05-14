@@ -1,4 +1,4 @@
-package model.map;
+package model.map.Serializable;
 
 import java.io.Serializable;
 

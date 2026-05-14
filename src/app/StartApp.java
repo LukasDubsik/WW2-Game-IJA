@@ -20,7 +20,7 @@ import model.game.Game;
 import model.game.GameFactory;
 import model.map.Building;
 import model.map.Serializable.Overlay;
-import model.map.Position;
+import model.map.Serializable.Position;
 import model.map.Serializable.Terrain;
 import model.unit.ArmamentType;
 import model.unit.Unit;

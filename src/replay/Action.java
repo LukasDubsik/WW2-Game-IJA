@@ -1,6 +1,6 @@
 package replay;
 
-import model.map.Position;
+import model.map.Serializable.Position;
 import model.unit.Unit;
 import replay.records.DamageRecord;
 import replay.records.MoveRecord;
