@@ -34,6 +34,15 @@ public class Building {
     }
 
     /**
+     * @brief Check if the building is a factory
+     *
+     * @return True if the building is a FACTORY.
+     */
+    public boolean isFactory(){
+        return terrain == Terrain.FACTORY;
+    }
+
+    /**
      * @brief Get the building current owner
      *
      * @return The string form of the owner
@@ -85,5 +94,14 @@ public class Building {
      */
     public int getMaxIntegrity(){
         return terrain == Terrain.HQ ? 5 : 3;
+    }
+
+    /**
+     * @brief Check if the building is a headquarters
+     *
+     * @return True if the building is a HQ.
+     */
+    public boolean isHQ(){
+        return terrain == Terrain.HQ;
     }
 }

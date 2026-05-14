@@ -12,10 +12,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.ScrollPane;
+import javafx.scene.control.*;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -33,8 +30,12 @@ import view.board.GameCanvas;
 
 public class StartApp extends Application {
 
-    private Game game; ///< Current game
-    private GameCanvas canvas;
+    private static Game game; ///< Global game
+    private static GameCanvas canvas; ///< Global game canvas
+    private static Label turnLabel; ///< Global turn label
+    private static Label replayLabel; ///< Global replay label
+    private static Label economyLabel; ///< Global economy label
+    private static InfoPanelWidgets info_panel; ///< Global info panel
 
     /**
      * @brief Small helper structure for one field row in the side panel
@@ -117,22 +118,22 @@ public class StartApp extends Application {
         game = GameFactory.createGame(map_path, units_path);
 
         // Label holding the current wealth of each player
-        Label economyLabel = new Label();
+        economyLabel = new Label();
         economyLabel.setStyle("-fx-text-fill: #FFD700; -fx-font-size: 16px; -fx-font-weight: bold;");
         updateEconomyLabel(economyLabel, game);
 
         // Create the prettier side information panel
-        InfoPanelWidgets info_panel = createInfoPanel();
+        info_panel = createInfoPanel();
         setFactoryButtonsEvents(info_panel, game, economyLabel);
         clearInfoPanel(info_panel);
 
         // Label holding the currently active turn/player
-        Label turnLabel = new Label();
+        turnLabel = new Label();
         turnLabel.setStyle("-fx-text-fill: #d0d0d0; -fx-font-size: 14px;");
         updateTurnLabel(turnLabel, game);
 
         // Label if the game is in replay mode
-        Label replayLabel = new Label();
+        replayLabel = new Label();
         replayLabel.setStyle("-fx-text-fill: red; -fx-font-size: 14px;");
         updateReplayLabel(replayLabel, game);
 
@@ -271,6 +272,36 @@ public class StartApp extends Application {
         Region rightSpacer = new Region();
         HBox.setHgrow(rightSpacer, Priority.ALWAYS);
 
+        // Checkbox for player 1 to be a bot
+        CheckBox botP1CheckBox = new CheckBox("P1 bot");
+        botP1CheckBox.setStyle(
+                "-fx-text-fill: #f3f6fb;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-font-size: 11px;" +
+                        "-fx-padding: 4 0 4 0;" +
+                        "-fx-mark-color: #4ac26b;" +
+                        "-fx-focus-color: transparent;" +
+                        "-fx-faint-focus-color: transparent;"
+        );
+        botP1CheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            game.setPlayerBot("P1", newValue);
+        });
+
+        // Checkbox for player 2 to be a bot
+        CheckBox botP2CheckBox = new CheckBox("P2 bot");
+        botP2CheckBox.setStyle(
+                "-fx-text-fill: #f3f6fb;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-font-size: 11px;" +
+                        "-fx-padding: 4 0 4 0;" +
+                        "-fx-mark-color: #4ac26b;" +
+                        "-fx-focus-color: transparent;" +
+                        "-fx-faint-focus-color: transparent;"
+        );
+        botP2CheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            game.setPlayerBot("P2", newValue);
+        });
+
         // Button to open a new replay
         Button openReplayButton = new Button("Open replay");
         setDefaultButtonFont(openReplayButton);
@@ -295,6 +326,8 @@ public class StartApp extends Application {
                     Platform.runLater(() -> {
                         canvas.draw();
                         updateReplayLabel(replayLabel, game);
+                        updateTurnLabel(turnLabel, game);
+                        updateEconomyLabel(economyLabel, game);
                     });
                 }
             });
@@ -364,7 +397,7 @@ public class StartApp extends Application {
         });
 
         // Put the controls together
-        bottomPanel.getChildren().addAll(turnLabel, replayLabel, leftSpacer, economyLabel, rightSpacer, openReplayButton, saveReplayButton, prevTurnButton, nextTurnButton);
+        bottomPanel.getChildren().addAll(turnLabel, replayLabel, leftSpacer, economyLabel, rightSpacer, botP1CheckBox, botP2CheckBox, openReplayButton, saveReplayButton, prevTurnButton, nextTurnButton);
 
         // Place the panel at the bottom
         root.setBottom(bottomPanel);
@@ -1355,5 +1388,18 @@ public class StartApp extends Application {
             setButtonFontAffordable(panel.M3_HALFTRACK, game.canAffor(player, UnitType.M3_HALFTRACK));
             setButtonFontAffordable(panel.BA_64_ARMORED_CAR, game.canAffor(player, UnitType.BA_64_ARMORED_CAR));
         }
+    }
+
+    /**
+     * @brief Update the current canvas screen
+     *
+     * @param game The current game
+     */
+    public static void updateScreen(Game game){
+        canvas.clearSelections();
+        updateTurnLabel(turnLabel, game);
+        updateReplayLabel(replayLabel, game);
+        updateEconomyLabel(economyLabel, game);
+        clearInfoPanel(info_panel);
     }
 }

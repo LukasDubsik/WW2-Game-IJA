@@ -122,7 +122,6 @@ public final class GameCanvas extends Canvas {
 
         // If the tile is one of the movement options, animate movement and stop here
         if (movement_map[clicked.row()][clicked.column()]) {
-            animateMovement(previous_position, clicked);
 
             // Turn off replay mode
             if (game.isReplayMode()) {
@@ -130,8 +129,7 @@ public final class GameCanvas extends Canvas {
                 game.getReplay().branchTimeline();
             }
 
-            // Add record of the move
-            game.getReplay().addMove(previous_position, clicked);
+            animateMovement(previous_position, clicked);
 
             return;
         }

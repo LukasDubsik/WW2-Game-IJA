@@ -13,13 +13,9 @@ import java.util.ArrayList;
  */
 public class TurnRecord implements Serializable {
 
-    private final ArrayList<MoveRecord> moves = new ArrayList<>(); ///< List of all moves made in that turn
     private final ArrayList<BuildingIntegrityRecord> birList = new ArrayList<>(); ///< List of all building integrity and owner changes
-    private final ArrayList<DamageRecord> damageList = new ArrayList<>(); ///< List of all damages dealt that round
-    private final ArrayList<Unit> unitsDestroyed = new ArrayList<>(); ///< List of all destroyed units in that turn
-    private final ArrayList<UnitPurchaseRecord> unitsPurchased = new ArrayList<>(); /// < List of all puchased that turn
-
-    private int income = 0; ///< Record of the income the current player got for that turn
+    private final ArrayList<Action> actionList = new ArrayList<>(); ///< List of all actions the player has made this current turn
+    private IncomeRecord incomeRecord; ///< Record of the income the current player got for that turn
 
     public TurnRecord() {
     }
@@ -30,12 +26,9 @@ public class TurnRecord implements Serializable {
      * @param turnRecord Turn record in the previous replay
      */
     public TurnRecord(TurnRecord turnRecord){
-        moves.addAll(turnRecord.moves);
         birList.addAll(turnRecord.birList);
-        damageList.addAll(turnRecord.damageList);
-        unitsDestroyed.addAll(turnRecord.unitsDestroyed);
-        unitsPurchased.addAll(turnRecord.unitsPurchased);
-        this.income = turnRecord.income;
+        this.incomeRecord = turnRecord.incomeRecord;
+        this.actionList.addAll(turnRecord.actionList);
     }
 
     /**
@@ -45,16 +38,7 @@ public class TurnRecord implements Serializable {
      * @param pos2 The new position of a unit
      */
     public void addMove(Position pos1, Position pos2){
-        moves.add(new MoveRecord(pos1, pos2));
-    }
-
-    /**
-     * @brief Get the list of moves in that turn
-     *
-     * @return List of all moves
-     */
-    public ArrayList<MoveRecord> getMoves() {
-        return moves;
+        actionList.add(new Action(Action.ActionEnum.MOVE, new MoveRecord(pos1, pos2)));
     }
 
     /**
@@ -84,16 +68,7 @@ public class TurnRecord implements Serializable {
      * @param damage Damage dealt
      */
     public void addDamageRecord(Position pos, int damage){
-        damageList.add(new DamageRecord(pos, damage));
-    }
-
-    /**
-     * @brief Get the list of damages dealt in that turn
-     *
-     * @return List of all damages dealt
-     */
-    public ArrayList<DamageRecord> getDamageList() {
-        return damageList;
+        actionList.add(new Action(Action.ActionEnum.DAMAGE, new DamageRecord(pos, damage)));
     }
 
     /**
@@ -101,17 +76,8 @@ public class TurnRecord implements Serializable {
      *
      * @param unit Destroyed unit
      */
-    public void addDestroyedUnit(Unit unit){
-        unitsDestroyed.add(unit);
-    }
-
-    /**
-     * @brief Get the list of destroyed units in that turn
-     *
-     * @return List of all destroyed units
-     */
-    public ArrayList<Unit> getUnitsDestroyed() {
-        return unitsDestroyed;
+    public void addDestroyedUnit(Unit unit, Position destroPosition){
+        actionList.add(new Action(Action.ActionEnum.DESTROY, unit, destroPosition));
     }
 
     /**
@@ -119,8 +85,8 @@ public class TurnRecord implements Serializable {
      *
      * @return The income gained in that turn
      */
-    public int getIncome() {
-        return income;
+    public IncomeRecord getIncomeRecord() {
+        return incomeRecord;
     }
 
     /**
@@ -128,8 +94,8 @@ public class TurnRecord implements Serializable {
      *
      * @param income new value of the income
      */
-    public void setIncome(int income) {
-        this.income = income;
+    public void setIncomeRecord(String player, int income) {
+        this.incomeRecord = new IncomeRecord(player, income);
     }
 
     /**
@@ -137,11 +103,8 @@ public class TurnRecord implements Serializable {
      *
      */
     public void clearRecords() {
-        moves.clear();
         birList.clear();
-        damageList.clear();
-        unitsDestroyed.clear();
-        unitsPurchased.clear();
+        actionList.clear();
     }
 
     /**
@@ -151,15 +114,15 @@ public class TurnRecord implements Serializable {
      * @param position Position of the factory
      */
     public void addPurchasedUnit(UnitType unitType, Position position){
-        unitsPurchased.add(new UnitPurchaseRecord(unitType, position));
+        actionList.add(new Action(Action.ActionEnum.BUY, new UnitPurchaseRecord(unitType, position)));
     }
 
     /**
-     * @brief Get the list of purchased units in that turn
+     * @brief Get the list of actions the player has made that turn
      *
-     * @return List of all purchased units
+     * @return The list of actions
      */
-    public ArrayList<UnitPurchaseRecord> getUnitsPurchased() {
-        return unitsPurchased;
+    public ArrayList<Action> getActionList() {
+        return actionList;
     }
 }

@@ -80,9 +80,9 @@ public class Replay implements Serializable {
      *
      * @param income Wealth the previous player got for that turn
      */
-    public void addNextTurn(int income) {
+    public void addNextTurn(String player, int income) {
         truncateFuture();
-        turns.get(turnIndex).setIncome(income);
+        turns.get(turnIndex).setIncomeRecord(player, income);
         turnIndex++;
         turns.add(new TurnRecord());
     }
