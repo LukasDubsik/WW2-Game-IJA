@@ -54,7 +54,9 @@ public class GameFactory {
         String[] players = {"P1", "P2"};
 
         // Return the created game
-        return createGame(map_rows, players);
+        Game game = createGame(map_rows, players);
+        game.setReplay(new Replay(game));
+        return game;
     }
 
     /**
@@ -153,10 +155,35 @@ public class GameFactory {
         // Then load the unit placements into it
         UnitPlacementLoader.loadUnits(game, unit_file);
 
-        // Set the initial ownership of buildings
+        // Fall back to legacy ownership assignment from garrisoned buildings
         game.setOwnership();
 
-        // Create a new replay for the game
+        // Create a new replay for the game after units are placed
+        game.setReplay(new Replay(game));
+
+        return game;
+    }
+
+    /**
+     * @brief Create the game from map, unit placement and explicit building ownership files
+     *
+     * @param map_file The map file
+     * @param unit_file The unit placement file
+     * @param building_file The building ownership file
+     *
+     * @return The fully initialized scenario
+     */
+    public static Game createGame(Path map_file, Path unit_file, Path building_file) {
+        // First create the base map game
+        Game game = createGame(map_file);
+
+        // Load explicit building ownership first so ownership is independent of unit placement
+        BuildingOwnershipLoader.loadBuildings(game, building_file);
+
+        // Then load unit placements
+        UnitPlacementLoader.loadUnits(game, unit_file);
+
+        // Create a new replay for the game after all scenario state exists
         game.setReplay(new Replay(game));
 
         return game;

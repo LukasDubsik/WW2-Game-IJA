@@ -29,7 +29,9 @@ public class Replay implements Serializable {
      */
     public Replay(Game game) {
         this.map = game.getGameMap();
-        this.units.putAll(game.getUnits_map());
+        for (Map.Entry<Position, Unit> entry : game.getUnits_map().entrySet()) {
+            this.units.put(entry.getKey(), new Unit(entry.getValue()));
+        }
         this.turns.add(0, new TurnRecord());
     }
 
@@ -40,7 +42,9 @@ public class Replay implements Serializable {
      */
     public Replay (Replay replay){
         this.map = replay.getMap();
-        this.units.putAll(replay.units);
+        for (Map.Entry<Position, Unit> entry : replay.units.entrySet()) {
+            this.units.put(entry.getKey(), new Unit(entry.getValue()));
+        }
         for(TurnRecord turnRecord : replay.turns){
             this.turns.add(new TurnRecord(turnRecord));
         }

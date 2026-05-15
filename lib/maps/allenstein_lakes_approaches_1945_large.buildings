@@ -1,0 +1,39 @@
+# owner ; row ; column
+# P1 = Soviets / western attacking side
+# P2 = Germans / eastern delaying defence
+
+# Soviet-held western lodgement and rear node
+P1 ; 3 ; 0
+P1 ; 3 ; 1
+P1 ; 4 ; 0
+P1 ; 4 ; 1
+P1 ; 6 ; 4
+P1 ; 6 ; 5
+P1 ; 7 ; 4
+P1 ; 7 ; 5
+P1 ; 10 ; 4
+
+# Contested central Allenstein approach nodes, initially still German-held
+P2 ; 0 ; 14
+P2 ; 0 ; 15
+P2 ; 0 ; 16
+P2 ; 1 ; 14
+P2 ; 1 ; 15
+P2 ; 2 ; 10
+P2 ; 2 ; 11
+P2 ; 2 ; 12
+P2 ; 3 ; 10
+P2 ; 3 ; 11
+P2 ; 10 ; 12
+P2 ; 13 ; 14
+
+# German eastern / north-eastern defensive and command nodes
+P2 ; 6 ; 22
+P2 ; 6 ; 23
+P2 ; 7 ; 22
+P2 ; 7 ; 23
+P2 ; 10 ; 18
+P2 ; 10 ; 19
+P2 ; 13 ; 25
+P2 ; 13 ; 26
+P2 ; 13 ; 27

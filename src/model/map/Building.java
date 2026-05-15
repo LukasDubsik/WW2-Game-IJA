@@ -18,10 +18,19 @@ public class Building {
     public Building(String owner, Terrain terrain) {
         this.owner = owner;
         this.terrain = terrain;
-        if(terrain == Terrain.HQ)
-            integrity = 5;
-        else
-            integrity = 3;
+        this.integrity = getMaxIntegrityForTerrain(terrain);
+    }
+
+
+    /**
+     * @brief Copy constructor of the Building class
+     *
+     * @param other Building to copy
+     */
+    public Building(Building other) {
+        this.owner = other.owner;
+        this.terrain = other.terrain;
+        this.integrity = other.integrity;
     }
 
     /**
@@ -84,7 +93,7 @@ public class Building {
      * @return True if the building is at full integrity.
      */
     public boolean isFull(){
-        return (terrain == Terrain.HQ && integrity == 5) || (terrain != Terrain.HQ && integrity == 3);
+        return integrity >= getMaxIntegrity();
     }
 
     /**
@@ -93,7 +102,21 @@ public class Building {
      * @return Integer of the maximum integrity.
      */
     public int getMaxIntegrity(){
-        return terrain == Terrain.HQ ? 5 : 3;
+        return getMaxIntegrityForTerrain(terrain);
+    }
+
+    /**
+     * @brief Get the capture integrity for a building terrain
+     *
+     * Cities and factories are intentionally quick to capture so that the
+     * ownership change is visible during normal play. HQ tiles are slower
+     * because capturing them is the victory condition.
+     *
+     * @param terrain The building terrain
+     * @return The maximum integrity of that building
+     */
+    private static int getMaxIntegrityForTerrain(Terrain terrain) {
+        return terrain == Terrain.HQ ? 3 : 1;
     }
 
     /**

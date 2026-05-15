@@ -493,7 +493,7 @@ public class Bot {
         int income = 0;
         for(Building building : buildings.values()){
             if(building.isCity())
-                income += 1000;
+                income += Game.CITY_INCOME;
         }
         return income;
     }

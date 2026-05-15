@@ -7,4 +7,3 @@ This is a **zoomed-in coastal corridor scenario** inspired by the fighting west 
 
 ## 2. `allenstein_lakes_approaches_1945_large.map`
 This is a **larger inland battle-space abstraction** of the Allenstein (Olsztyn) sector during the Soviet January 1945 drive through southern East Prussia. Rather than depicting the entire breakthrough to the coast, it focuses on the tactically meaningful lake-and-town approach terrain around Allenstein: lakes, wooded ground, broken movement corridors, and urban nodes. Allenstein fell during Rokossovsky’s thrust that helped cut off German forces in East Prussia from the west, so this scenario is designed as a maneuver-and-node-control map rather than a simple frontal clash. Britannica specifically notes Rokossovsky’s advance through Allenstein toward the Gulf of Danzig, and operational summaries place the Soviet capture of Allenstein on 22 January 1945. citeturn746480search3turn746480search5
-

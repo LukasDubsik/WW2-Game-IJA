@@ -21,6 +21,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 import model.game.Game;
+import model.map.Building;
 import model.map.Serializable.Overlay;
 import model.map.Serializable.Position;
 import model.map.Serializable.Terrain;
@@ -254,6 +255,12 @@ public final class GameCanvas extends Canvas {
         // Attempt to load the actual image asset
         Image image = loadUnitImage(unit);
 
+        // Units that already acted are drawn dimmed, so turn state is visible on the map
+        gc.save();
+        if (unit.hasAlreadyPlayed()) {
+            gc.setGlobalAlpha(0.48);
+        }
+
         // If the image failed to load, fall back to the text label
         if (image == null) {
             gc.setFill(ownerColor(unit.getOwner()));
@@ -272,6 +279,7 @@ public final class GameCanvas extends Canvas {
                     draw_h
             );
         }
+        gc.restore();
 
         // Draw the hp bar background
         double hp_bar_w = getTileX() * 0.42;
@@ -311,6 +319,16 @@ public final class GameCanvas extends Canvas {
                 x - getTileX() * 0.07,
                 hp_bar_y - getTileY() * 0.02
         );
+
+        // Draw a small check mark when the unit has no action left
+        if (unit.hasAlreadyPlayed()) {
+            double marker_r = getTileY() * 0.10;
+            gc.setFill(Color.color(0.0, 0.0, 0.0, 0.70));
+            gc.fillOval(x + getTileX() * 0.22, y - getTileY() * 0.34, marker_r * 2.0, marker_r * 2.0);
+            gc.setFill(Color.WHITE);
+            gc.setFont(Font.font(11));
+            gc.fillText("✓", x + getTileX() * 0.255, y - getTileY() * 0.20);
+        }
 
         gc.restore();
     }
@@ -372,6 +390,8 @@ public final class GameCanvas extends Canvas {
                     gc.restore();
                 }
 
+                drawBuildingState(gc, pos, x, y);
+
                 if (movement_animation_running
                         && animated_unit != null
                         && animation_origin != null
@@ -391,6 +411,52 @@ public final class GameCanvas extends Canvas {
                 && animation_draw_position != null) {
             drawUnit(gc, animated_unit, animation_draw_position);
         }
+    }
+
+    /**
+     * @brief Draw owner and capture state for a building tile
+     *
+     * @param gc Graphics context
+     * @param pos Tile position
+     * @param x Tile center X
+     * @param y Tile center Y
+     */
+    private void drawBuildingState(GraphicsContext gc, Position pos, double x, double y) {
+        Building building = game.getBuilding(pos);
+        if (building == null) {
+            return;
+        }
+
+        double flag_w = getTileX() * 0.26;
+        double flag_h = getTileY() * 0.06;
+        double flag_x = x - flag_w / 2.0;
+        double flag_y = y - getTileY() * 0.39;
+
+        gc.save();
+
+        // Owner marker
+        gc.setFill(ownerColor(building.getOwner()));
+        gc.fillRect(flag_x, flag_y, flag_w, flag_h);
+        gc.setStroke(Color.BLACK);
+        gc.strokeRect(flag_x, flag_y, flag_w, flag_h);
+
+        // Capture / integrity marker when the building is being reduced
+        if (!building.isFull()) {
+            double bar_w = getTileX() * 0.34;
+            double bar_h = getTileY() * 0.055;
+            double bar_x = x - bar_w / 2.0;
+            double bar_y = y + getTileY() * 0.36;
+            double ratio = (double) building.getIntegrity() / (double) building.getMaxIntegrity();
+
+            gc.setFill(Color.color(0.0, 0.0, 0.0, 0.78));
+            gc.fillRect(bar_x, bar_y, bar_w, bar_h);
+            gc.setFill(Color.ORANGE);
+            gc.fillRect(bar_x, bar_y, bar_w * ratio, bar_h);
+            gc.setStroke(Color.BLACK);
+            gc.strokeRect(bar_x, bar_y, bar_w, bar_h);
+        }
+
+        gc.restore();
     }
 
     /**

@@ -1,0 +1,93 @@
+package model.map;
+
+/**
+ * @enum Terrain
+ * @brief The individual Terrain types of the game
+ */
+public enum Terrain {
+    // List of the types and their names of the Terrain and values
+    // Goes as: CODE, DISPLAY_NAME, ASSET_KEY, DEFENCE_BONUS, INFANTRY_COST, VEHICLE_COST
+    PLAIN("P", "Plain", "snow_plain", 1, 1, 1),
+    FOREST("F", "Forest", "winter_forest", 2, 1, 2),
+    MOUNTAIN("M", "Mountain", "snow_ridge", 4, 2, Integer.MAX_VALUE),
+    WATER("W", "Water", "winter_water", 0, Integer.MAX_VALUE, Integer.MAX_VALUE),
+    CITY("C", "City", "winter_city", 3, 1, 1),
+    FACTORY("T", "Factory", "winter_factory", 3, 1, 1),
+    HQ("H", "HQ", "winter_hq", 4, 1, 1);
+
+    private String code; ///< Holder for the String value of the enum
+    private String display_name; ///< The name of the main type
+    private String asset_key; ///< The true asset held there
+    private int defence_bonus; ///< Value for defence
+    private int infantry_cost; ///< Value of cost for infantry to cross
+    private int vehicle_cost;  ///< Value of cost for vehicle to cross
+
+    /**
+     * @brief Constructor of the Terrain enum
+     * 
+     * @param val_ The String value of the enum.
+     */
+    Terrain(String code_, String display_name_, String asset_key_, int defence_bonus_, int infantry_cost_, int vehicle_cost_) {
+        this.code = code_;
+        this.display_name = display_name_;
+        this.asset_key = asset_key_;
+        this.defence_bonus = defence_bonus_;
+        this.infantry_cost = infantry_cost_;
+        this.vehicle_cost = vehicle_cost_;
+    }
+
+    /**
+     * @brief Return the cost of infantry movement for that terrain
+     * 
+     * @return The cost of the infantry movement.
+     */
+    public int getInfantryMovementCost() {
+        return infantry_cost;
+    }
+
+    /**
+     * @brief Return the cost of vehicle movement for that terrain
+     * 
+     * @return The cost of the vehicle movement.
+     */
+    public int getVehicleMovementCost() {
+        return vehicle_cost;
+    }
+
+    /**
+     * @brief Get the defence bonus of the terrain
+     * 
+     * @return The terrain's defence bonus
+     */
+    public int getDefenceBonus() {
+        return defence_bonus;
+    }
+
+    /**
+     * @brief Given enum in teh String form, create from it the enum
+     * 
+     * @param type The string enum value.
+     * @return The enum created from teh String input.
+     */
+    public static Terrain convert(String type) {
+        // Check that the input isn't null
+        if (type == null || type.trim().length() == 0) {
+            throw new IllegalArgumentException("Expected a single Letter input.");
+        }
+
+        // Attempt to normalie the string
+        String type_proc = type.trim().toUpperCase();
+
+        // Attempt to convert to the enum
+        return switch (type_proc) {
+            case "P" -> PLAIN;
+            case "F" -> FOREST;
+            case "M" -> MOUNTAIN;
+            case "W" -> WATER;
+            case "C" -> CITY;
+            case "T" -> FACTORY;
+            case "H" -> HQ;
+            default -> throw new IllegalArgumentException("Unsupported terrain value: " + type_proc);
+        };
+    }
+}

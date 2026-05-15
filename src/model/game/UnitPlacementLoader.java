@@ -100,7 +100,14 @@ public class UnitPlacementLoader {
             }
 
             // Create the unit inside the already existing game
-            game.createUnit(unit_type, owner, row, column);
+            try {
+                game.createUnit(unit_type, owner, row, column);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "Invalid unit placement at line " + (line_index + 1) + ": " + e.getMessage(),
+                        e
+                );
+            }
         }
     }
 }

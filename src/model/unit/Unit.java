@@ -30,6 +30,21 @@ public class Unit implements Serializable {
         this.moved_this_turn = false;
     }
 
+
+    /**
+     * @brief Copy constructor of the Unit class
+     * 
+     * @param other Unit to copy
+     */
+    public Unit(Unit other) {
+        this.unitType = other.unitType;
+        this.owner = other.owner;
+        this.position = other.position;
+        this.current_hp = other.current_hp;
+        this.already_played = other.already_played;
+        this.moved_this_turn = other.moved_this_turn;
+    }
+
     // Get the values of the Unit
 
     /**

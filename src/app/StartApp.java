@@ -234,8 +234,8 @@ public class StartApp extends Application {
             throw new IllegalArgumentException("Scenario cannot be null.");
         }
 
-        // Create the fully initialized scenario from map + unit placement file
-        Game loaded_game = GameFactory.createGame(scenario.map_path, scenario.units_path);
+        // Create the fully initialized scenario from map + unit placement + building ownership files
+        Game loaded_game = GameFactory.createGame(scenario.map_path, scenario.units_path, scenario.buildings_path);
 
         // Let the chosen faction start
         loaded_game.setCurrentPlayer(chosen_player);
@@ -266,12 +266,14 @@ public class StartApp extends Application {
                 new ScenarioDefinition(
                         "Balga / Heiligenbeil corridor",
                         Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.map"),
-                        Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.units")
+                        Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.units"),
+                        Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.buildings")
                 ),
                 new ScenarioDefinition(
                         "Allenstein lakes approaches",
                         Path.of("lib/maps/allenstein_lakes_approaches_1945_large.map"),
-                        Path.of("lib/maps/allenstein_lakes_approaches_1945_large.units")
+                        Path.of("lib/maps/allenstein_lakes_approaches_1945_large.units"),
+                        Path.of("lib/maps/allenstein_lakes_approaches_1945_large.buildings")
                 )
         );
     }
@@ -1208,12 +1210,10 @@ public class StartApp extends Application {
      */
     private static void updateEconomyLabel(Label economyLabel, Game game) {
         Map<String, Integer> playerWealth = game.getPlayerWealth();
-        String p1 = (String) playerWealth.keySet().toArray()[0];
-        String p2 = (String) playerWealth.keySet().toArray()[1];
-        int p1Wealth = playerWealth.get(p1);
-        int p2Wealth = playerWealth.get(p2);
+        int p1Wealth = playerWealth.getOrDefault("P1", 0);
+        int p2Wealth = playerWealth.getOrDefault("P2", 0);
 
-        economyLabel.setText(p1Wealth + "$ : " + p1 + " | " + p2 + " : " + p2Wealth + "$");
+        economyLabel.setText("P1: " + p1Wealth + "$ | P2: " + p2Wealth + "$");
     }
 
     /**
@@ -1574,6 +1574,7 @@ public class StartApp extends Application {
         String name; ///< Display name of the scenario
         Path map_path; ///< The map file path
         Path units_path; ///< The unit placement file path
+        Path buildings_path; ///< The building ownership file path
 
         /**
          * @brief Constructor of the scenario definition
@@ -1581,11 +1582,13 @@ public class StartApp extends Application {
          * @param name_ Display name of the scenario
          * @param map_path_ Path to the map file
          * @param units_path_ Path to the unit placement file
+         * @param buildings_path_ Path to the building ownership file
          */
-        ScenarioDefinition(String name_, Path map_path_, Path units_path_) {
+        ScenarioDefinition(String name_, Path map_path_, Path units_path_, Path buildings_path_) {
             this.name = name_;
             this.map_path = map_path_;
             this.units_path = units_path_;
+            this.buildings_path = buildings_path_;
         }
 
         /**
