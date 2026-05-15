@@ -1,3 +1,8 @@
+/**
+ * @file GameFactory.java
+ * @author Team
+ * @brief Source file GameFactory.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.game;
 
 import java.io.IOException;

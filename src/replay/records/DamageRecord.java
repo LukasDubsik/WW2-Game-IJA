@@ -1,8 +1,13 @@
+/**
+ * @file DamageRecord.java
+ * @author Team
+ * @brief Source file DamageRecord.java for the IJA Advance-Wars-inspired game project.
+ */
 package replay.records;
 
-import model.map.Serializable.Position;
-
 import java.io.Serializable;
+
+import model.map.Serializable.Position;
 
 /**
  * @brief Immutable record of damage dealt.

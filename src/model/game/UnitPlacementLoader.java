@@ -1,3 +1,8 @@
+/**
+ * @file UnitPlacementLoader.java
+ * @author Team
+ * @brief Source file UnitPlacementLoader.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.game;
 
 import java.io.IOException;

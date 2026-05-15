@@ -1,8 +1,16 @@
+/**
+ * @file Building.java
+ * @author Team
+ * @brief Source file Building.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map;
+
+import java.io.Serializable;
 
 import model.map.Serializable.Terrain;
 
-public class Building {
+public class Building implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private final Terrain terrain; ///< Holder of the specific type of building
 
@@ -108,15 +116,15 @@ public class Building {
     /**
      * @brief Get the capture integrity for a building terrain
      *
-     * Cities and factories are intentionally quick to capture so that the
-     * ownership change is visible during normal play. HQ tiles are slower
-     * because capturing them is the victory condition.
+     * Assignment capture rule: every neutral or enemy building has 20 capture
+     * points. The capturing infantry reduces them by floor(10 % of current HP)
+     * when the Capture action is used.
      *
      * @param terrain The building terrain
      * @return The maximum integrity of that building
      */
     private static int getMaxIntegrityForTerrain(Terrain terrain) {
-        return terrain == Terrain.HQ ? 3 : 1;
+        return 20;
     }
 
     /**

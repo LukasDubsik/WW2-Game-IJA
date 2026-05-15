@@ -1,8 +1,13 @@
+/**
+ * @file MoveRecord.java
+ * @author Team
+ * @brief Source file MoveRecord.java for the IJA Advance-Wars-inspired game project.
+ */
 package replay.records;
 
-import model.map.Serializable.Position;
-
 import java.io.Serializable;
+
+import model.map.Serializable.Position;
 
 /**
  * @brief Immutable record of positions

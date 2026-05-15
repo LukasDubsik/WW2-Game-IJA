@@ -1,3 +1,8 @@
+/**
+ * @file Position.java
+ * @author Team
+ * @brief Source file Position.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map.Serializable;
 
 import java.io.Serializable;

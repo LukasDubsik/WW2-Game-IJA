@@ -1,3 +1,8 @@
+/**
+ * @file Bot.java
+ * @author Team
+ * @brief Source file Bot.java for the IJA Advance-Wars-inspired game project.
+ */
 package bot;
 
 import java.util.ArrayList;

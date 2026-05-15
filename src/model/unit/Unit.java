@@ -1,8 +1,13 @@
+/**
+ * @file Unit.java
+ * @author Team
+ * @brief Source file Unit.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.unit;
 
-import model.map.Serializable.Position;
-
 import java.io.Serializable;
+
+import model.map.Serializable.Position;
 
 public class Unit implements Serializable {
 

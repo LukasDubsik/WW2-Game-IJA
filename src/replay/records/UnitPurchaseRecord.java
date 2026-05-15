@@ -1,9 +1,14 @@
+/**
+ * @file UnitPurchaseRecord.java
+ * @author Team
+ * @brief Source file UnitPurchaseRecord.java for the IJA Advance-Wars-inspired game project.
+ */
 package replay.records;
+
+import java.io.Serializable;
 
 import model.map.Serializable.Position;
 import model.unit.UnitType;
-
-import java.io.Serializable;
 
 /**
  * @brief Immutable record of purchased units

@@ -1,0 +1,8 @@
+terrain	defence	infantry_cost	vehicle_cost	note
+PLAIN	0	1	1	Snow plain / open ground
+FOREST	1	2	3	Concealment and slower movement
+MOUNTAIN	2	3	INF	Impassable for vehicles
+WATER	0	INF	INF	Impassable for all units
+CITY	2	1	1	Income and repair building
+FACTORY	2	1	1	Unit purchase/spawn building
+HQ	3	1	1	Victory building

@@ -1,3 +1,8 @@
+/**
+ * @file GameMap.java
+ * @author Team
+ * @brief Source file GameMap.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map.Serializable;
 
 import java.io.Serializable;

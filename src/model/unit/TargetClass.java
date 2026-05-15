@@ -1,3 +1,8 @@
+/**
+ * @file TargetClass.java
+ * @author Team
+ * @brief Source file TargetClass.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.unit;
 
 /**

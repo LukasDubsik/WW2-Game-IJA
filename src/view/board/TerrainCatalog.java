@@ -1,3 +1,8 @@
+/**
+ * @file TerrainCatalog.java
+ * @author Team
+ * @brief Source file TerrainCatalog.java for the IJA Advance-Wars-inspired game project.
+ */
 package view.board;
 
 import javafx.scene.paint.Color;

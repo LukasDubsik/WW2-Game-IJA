@@ -1,12 +1,17 @@
+/**
+ * @file Action.java
+ * @author Team
+ * @brief Source file Action.java for the IJA Advance-Wars-inspired game project.
+ */
 package replay;
+
+import java.io.Serializable;
 
 import model.map.Serializable.Position;
 import model.unit.Unit;
 import replay.records.DamageRecord;
 import replay.records.MoveRecord;
 import replay.records.UnitPurchaseRecord;
-
-import java.io.Serializable;
 
 /**
  * @class Action

@@ -1,3 +1,8 @@
+/**
+ * @file IncomeRecord.java
+ * @author Team
+ * @brief Source file IncomeRecord.java for the IJA Advance-Wars-inspired game project.
+ */
 package replay.records;
 
 import java.io.Serializable;

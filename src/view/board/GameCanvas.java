@@ -1,3 +1,8 @@
+/**
+ * @file GameCanvas.java
+ * @author Team
+ * @brief Source file GameCanvas.java for the IJA Advance-Wars-inspired game project.
+ */
 package view.board;
 
 import java.io.File;
@@ -926,9 +931,10 @@ public final class GameCanvas extends Canvas {
                     && !moved_unit.hasAlreadyPlayed()) {
 
                 List<Position> attackable_tiles = game.getAttackableTiles(to);
+                boolean can_capture = game.canCaptureBuilding(to);
 
-                // If there are attack options, keep the unit selected and show them
-                if (!attackable_tiles.isEmpty()) {
+                // If there are attack or capture options, keep the unit selected and show them
+                if (!attackable_tiles.isEmpty() || can_capture) {
                     tiles_selected[to.row()][to.column()] = true;
 
                     for (Position tile : attackable_tiles) {
@@ -936,6 +942,7 @@ public final class GameCanvas extends Canvas {
                     }
 
                     previous_position = to;
+                    tileClickHandler.accept(to);
                     draw();
                     return;
                 }

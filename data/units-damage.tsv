@@ -1,0 +1,5 @@
+# This project uses armament-based base damage in UnitType/ArmamentType.
+# The final combat formula then applies attacker HP and defender terrain defence:
+# damage = baseDamage * attackerHP/100 * (1 - terrainBonus*0.1), rounded down.
+attacker	target_class	base_damage_source
+ALL	SOFT/HARD	computed from ArmamentType list of the attacker unit

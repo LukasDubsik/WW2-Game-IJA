@@ -1,3 +1,8 @@
+/**
+ * @file Map.java
+ * @author Team
+ * @brief Source file Map.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map;
 
 import java.util.Arrays;

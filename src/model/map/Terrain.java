@@ -1,3 +1,8 @@
+/**
+ * @file Terrain.java
+ * @author Team
+ * @brief Source file Terrain.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map;
 
 /**

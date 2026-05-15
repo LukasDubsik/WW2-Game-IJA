@@ -1,3 +1,8 @@
+/**
+ * @file UnitType.java
+ * @author Team
+ * @brief Source file UnitType.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.unit;
 
 import java.util.List;

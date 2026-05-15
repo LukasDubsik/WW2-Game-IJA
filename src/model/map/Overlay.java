@@ -1,3 +1,8 @@
+/**
+ * @file Overlay.java
+ * @author Team
+ * @brief Source file Overlay.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map;
 
 /**

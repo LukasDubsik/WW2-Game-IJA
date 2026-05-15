@@ -1,14 +1,20 @@
+/**
+ * @file Replay.java
+ * @author Team
+ * @brief Source file Replay.java for the IJA Advance-Wars-inspired game project.
+ */
 package replay;
-
-import model.game.Game;
-import model.map.Serializable.Position;
-import model.map.Serializable.GameMap;
-import model.unit.Unit;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import model.game.Game;
+import model.map.Building;
+import model.map.Serializable.GameMap;
+import model.map.Serializable.Position;
+import model.unit.Unit;
 
 /**
  * @class Replay
@@ -18,6 +24,7 @@ public class Replay implements Serializable {
 
     private final GameMap map; ///< Terrain data at the start of the game
     private final Map<Position, Unit> units = new HashMap<>(); ///< Position of units at the start of the game
+    private final Map<Position, Building> buildings = new HashMap<>(); ///< Building ownership at the start of the game
 
     private final ArrayList<TurnRecord> turns = new ArrayList<>(); ///< List of all turns made in the game
     private int turnIndex = 0; ///< Current index of the current turn
@@ -32,6 +39,9 @@ public class Replay implements Serializable {
         for (Map.Entry<Position, Unit> entry : game.getUnits_map().entrySet()) {
             this.units.put(entry.getKey(), new Unit(entry.getValue()));
         }
+        for (Map.Entry<Position, Building> entry : game.getBuildings().entrySet()) {
+            this.buildings.put(entry.getKey(), new Building(entry.getValue()));
+        }
         this.turns.add(0, new TurnRecord());
     }
 
@@ -44,6 +54,9 @@ public class Replay implements Serializable {
         this.map = replay.getMap();
         for (Map.Entry<Position, Unit> entry : replay.units.entrySet()) {
             this.units.put(entry.getKey(), new Unit(entry.getValue()));
+        }
+        for (Map.Entry<Position, Building> entry : replay.buildings.entrySet()) {
+            this.buildings.put(entry.getKey(), new Building(entry.getValue()));
         }
         for(TurnRecord turnRecord : replay.turns){
             this.turns.add(new TurnRecord(turnRecord));
@@ -69,6 +82,15 @@ public class Replay implements Serializable {
     }
 
     /**
+     * @brief Get all buildings at the start of the replay
+     *
+     * @return Map of building ownership and capture state
+     */
+    public Map<Position, Building> getBuildings() {
+        return buildings;
+    }
+
+    /**
      * @brief Adds a new move to the replay record
      *
      * @param pos1 The previous position of a unit
@@ -86,7 +108,9 @@ public class Replay implements Serializable {
      */
     public void addNextTurn(String player, int income) {
         truncateFuture();
-        turns.get(turnIndex).setIncomeRecord(player, income);
+        if (turns.get(turnIndex).getIncomeRecord() == null) {
+            turns.get(turnIndex).setIncomeRecord(player, income);
+        }
         turnIndex++;
         turns.add(new TurnRecord());
     }

@@ -1,3 +1,8 @@
+/**
+ * @file StartApp.java
+ * @author Team
+ * @brief Source file StartApp.java for the IJA Advance-Wars-inspired game project.
+ */
 package app;
 
 import java.io.File;
@@ -38,6 +43,7 @@ import model.map.Serializable.Terrain;
 import model.unit.ArmamentType;
 import model.unit.Unit;
 import model.unit.UnitType;
+import replay.Replay;
 import view.board.GameCanvas;
 
 public class StartApp extends Application {
@@ -121,6 +127,9 @@ public class StartApp extends Application {
         Label action_section; ///< Action helper section title
         InfoRow action_row; ///< Current possible actions
         InfoRow attack_preview_row; ///< Attack preview row
+        HBox action_button_box; ///< Box with explicit action buttons
+        Button wait_button; ///< Button to wait / end unit action
+        Button capture_button; ///< Button to capture a building
 
         Label description_section; ///< Description section title
         InfoRow description_row; ///< Description row
@@ -181,6 +190,10 @@ public class StartApp extends Application {
         germans_button.setToggleGroup(faction_group);
         germans_button.setStyle("-fx-text-fill: white;");
 
+        RadioButton bot_vs_bot_button = new RadioButton("Bot vs Bot");
+        bot_vs_bot_button.setToggleGroup(faction_group);
+        bot_vs_bot_button.setStyle("-fx-text-fill: white;");
+
         // Start button
         Button start_button = new Button("Start scenario");
         start_button.setStyle(
@@ -195,12 +208,16 @@ public class StartApp extends Application {
             ScenarioDefinition chosen_scenario = scenario_box.getValue();
 
             String chosen_player = "P1";
-            if (faction_group.getSelectedToggle() == germans_button) {
+            boolean bot_vs_bot = faction_group.getSelectedToggle() == bot_vs_bot_button;
+
+            if (bot_vs_bot) {
+                chosen_player = "BOT";
+            } else if (faction_group.getSelectedToggle() == germans_button) {
                 chosen_player = "P2";
             }
 
             // Open the selected scenario
-            openScenario(stage, chosen_scenario, chosen_player);
+            openScenario(stage, chosen_scenario, chosen_player, bot_vs_bot);
         });
 
         VBox menu_box = new VBox(
@@ -212,6 +229,7 @@ public class StartApp extends Application {
                 faction_label,
                 soviets_button,
                 germans_button,
+                bot_vs_bot_button,
                 start_button
         );
 
@@ -232,7 +250,7 @@ public class StartApp extends Application {
         return new Scene(root, 1100, 700);
     }
 
-        private void openScenario(Stage stage, ScenarioDefinition scenario, String chosen_player) {
+        private void openScenario(Stage stage, ScenarioDefinition scenario, String chosen_player, boolean bot_vs_bot) {
         // Check that the scenario exists
         if (scenario == null) {
             throw new IllegalArgumentException("Scenario cannot be null.");
@@ -241,13 +259,18 @@ public class StartApp extends Application {
         // Create the fully initialized scenario from map + unit placement + building ownership files
         Game loaded_game = GameFactory.createGame(scenario.map_path, scenario.units_path, scenario.buildings_path);
 
-        // Let the chosen faction start
-        loaded_game.setCurrentPlayer(chosen_player);
+        // Let the chosen faction start. In Bot vs Bot mode P1 starts.
+        loaded_game.setCurrentPlayer(bot_vs_bot ? "P1" : chosen_player);
 
         // The selected faction is controlled by the human player.
-        // The other faction is controlled by the bot.
-        loaded_game.setPlayerBot("P1", !"P1".equals(chosen_player));
-        loaded_game.setPlayerBot("P2", !"P2".equals(chosen_player));
+        // In Bot vs Bot mode both sides are controlled by bots.
+        if (bot_vs_bot) {
+            loaded_game.setPlayerBot("P1", true);
+            loaded_game.setPlayerBot("P2", true);
+        } else {
+            loaded_game.setPlayerBot("P1", !"P1".equals(chosen_player));
+            loaded_game.setPlayerBot("P2", !"P2".equals(chosen_player));
+        }
 
         // Store globally for the rest of the application
         StartApp.game = loaded_game;
@@ -258,6 +281,11 @@ public class StartApp extends Application {
 
         stage.setTitle("IJA game - " + scenario.name);
         stage.setScene(scene);
+
+        // Start the automatic bot loop if both sides are bots.
+        if (bot_vs_bot) {
+            loaded_game.playCurrentBotTurnIfActive();
+        }
     }
 
     /**
@@ -495,8 +523,58 @@ public class StartApp extends Application {
             updateReplayLabel(replayLabel, game);
         });
 
+        // Button for loading a replay from disk
+        Button loadReplayButton = new Button("Load replay");
+        loadReplayButton.setStyle(
+                "-fx-background-color: #2b313d;"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+
+        loadReplayButton.setOnAction(event -> {
+            FileUtil.chooseFile("Load replay");
+            Replay loaded_replay = FileUtil.readFiletoReplay(FileUtil.file);
+
+            if (loaded_replay != null) {
+                Game loaded_game = new Game(new String[] {"P1", "P2"}, loaded_replay);
+                loaded_game.setPlayerBot("P1", false);
+                loaded_game.setPlayerBot("P2", false);
+
+                StartApp.game = loaded_game;
+                StartApp.chosen_player = "P1";
+
+                Scene loaded_scene = createGameScene(stage, loaded_game, "P1", "Loaded replay - press Next replay turn");
+                stage.setTitle("IJA game - Loaded replay");
+                stage.setScene(loaded_scene);
+            }
+        });
+
+        // Button for resuming normal play from the current replay state
+        Button resumePlayButton = new Button("Resume play");
+        resumePlayButton.setStyle(
+                "-fx-background-color: #2b313d;"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+
+        resumePlayButton.setOnAction(event -> {
+            if (game.isReplayMode()) {
+                game.setReplayMode(false);
+                if (game.getReplay() != null) {
+                    game.getReplay().branchTimeline();
+                }
+            }
+
+            updateReplayLabel(replayLabel, game);
+            updateTurnLabel(turnLabel, game, chosen_player);
+        });
+
         // Button for shifting to the next turn
-        Button nextTurnButton = new Button("Next turn");
+        Button nextTurnButton = new Button(game.isReplayMode() ? "Next replay turn" : "Next turn");
         nextTurnButton.setStyle(
                 "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
                         + "-fx-text-fill: white;"
@@ -516,6 +594,8 @@ public class StartApp extends Application {
             updateTurnLabel(turnLabel, game, chosen_player);
             updateReplayLabel(replayLabel, game);
             updateEconomyLabel(economyLabel, game);
+
+            nextTurnButton.setText(game.isReplayMode() ? "Next replay turn" : "Next turn");
 
             // Clear stale info from previous turn selection
             clearInfoPanel(info_panel);
@@ -540,7 +620,7 @@ public class StartApp extends Application {
         });
 
         // Put the controls together
-        bottomPanel.getChildren().addAll(turnLabel, replayLabel, economyLabel, spacer, saveReplayButton, prevTurnButton, menuButton, nextTurnButton);
+        bottomPanel.getChildren().addAll(turnLabel, replayLabel, economyLabel, spacer, saveReplayButton, loadReplayButton, resumePlayButton, prevTurnButton, menuButton, nextTurnButton);
 
         // Place the panel at the bottom
         root.setBottom(bottomPanel);
@@ -632,6 +712,13 @@ public class StartApp extends Application {
         // Action rows
         panel.action_row = createInfoRow("Available actions");
         panel.attack_preview_row = createInfoRow("Attack preview");
+        panel.wait_button = new Button("Wait");
+        panel.capture_button = new Button("Capture");
+        setDefaultSmallActionButton(panel.wait_button);
+        setDefaultSmallActionButton(panel.capture_button);
+        panel.action_button_box = new HBox(8, panel.wait_button, panel.capture_button);
+        panel.action_button_box.setManaged(false);
+        panel.action_button_box.setVisible(false);
 
         // HP block
         panel.hp_label = new Label("Hit points");
@@ -685,6 +772,7 @@ public class StartApp extends Application {
                 panel.action_section,
                 panel.action_row.box,
                 panel.attack_preview_row.box,
+                panel.action_button_box,
                 panel.description_section,
                 panel.description_row.box
         );
@@ -719,6 +807,21 @@ public class StartApp extends Application {
                         + "-fx-padding: 8 0 0 0;"
         );
         return label;
+    }
+
+    /**
+     * @brief Set the default style for small side-panel action buttons
+     *
+     * @param button Button to style
+     */
+    private static void setDefaultSmallActionButton(Button button) {
+        button.setStyle(
+                "-fx-background-color: #2b313d;"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 6;"
+                        + "-fx-padding: 6 12 6 12;"
+        );
     }
 
     /**
@@ -794,6 +897,12 @@ public class StartApp extends Application {
         setRowValue(panel.armaments_row, null);
         setRowValue(panel.action_row, null);
         setRowValue(panel.attack_preview_row, null);
+        panel.action_button_box.setVisible(false);
+        panel.action_button_box.setManaged(false);
+        panel.wait_button.setVisible(false);
+        panel.wait_button.setManaged(false);
+        panel.capture_button.setVisible(false);
+        panel.capture_button.setManaged(false);
 
         panel.factory_shop_grid_P1.setVisible(false);
         panel.factory_shop_grid_P1.setManaged(false);
@@ -904,6 +1013,12 @@ public class StartApp extends Application {
             setSectionVisible(panel.action_section, false);
             setRowValue(panel.action_row, null);
             setRowValue(panel.attack_preview_row, null);
+            panel.action_button_box.setVisible(false);
+            panel.action_button_box.setManaged(false);
+            panel.wait_button.setVisible(false);
+            panel.wait_button.setManaged(false);
+            panel.capture_button.setVisible(false);
+            panel.capture_button.setManaged(false);
             panel.hp_box.setManaged(false);
             panel.hp_box.setVisible(false);
 
@@ -942,7 +1057,42 @@ public class StartApp extends Application {
         String attack_preview = buildAttackPreviewText(game, position, unit);
         setRowValue(panel.action_row, action_text);
         setRowValue(panel.attack_preview_row, attack_preview);
-        setSectionVisible(panel.action_section, anyVisible(panel.action_row, panel.attack_preview_row));
+
+        boolean own_active_unit = unit.getOwner().equals(game.getCurrentPlayer()) && !unit.hasAlreadyPlayed();
+        boolean can_capture = game.canCaptureBuilding(position);
+
+        panel.wait_button.setVisible(own_active_unit);
+        panel.wait_button.setManaged(own_active_unit);
+        panel.capture_button.setVisible(can_capture);
+        panel.capture_button.setManaged(can_capture);
+        panel.action_button_box.setVisible(own_active_unit || can_capture);
+        panel.action_button_box.setManaged(own_active_unit || can_capture);
+
+        panel.wait_button.setOnAction(event -> {
+            if (game.finishUnitAction(position)) {
+                canvas.clearSelections();
+                canvas.draw();
+                updateInfoPanel(panel, game, position);
+                updateTurnLabel(turnLabel, game);
+                updateReplayLabel(replayLabel, game);
+                updateEconomyLabel(economyLabel, game);
+                updateVictoryScreen(panel);
+            }
+        });
+
+        panel.capture_button.setOnAction(event -> {
+            if (game.captureBuilding(position)) {
+                canvas.clearSelections();
+                canvas.draw();
+                updateInfoPanel(panel, game, position);
+                updateTurnLabel(turnLabel, game);
+                updateReplayLabel(replayLabel, game);
+                updateEconomyLabel(economyLabel, game);
+                updateVictoryScreen(panel);
+            }
+        });
+
+        setSectionVisible(panel.action_section, anyVisible(panel.action_row, panel.attack_preview_row) || own_active_unit || can_capture);
 
         setSectionVisible(panel.description_section, true);
         setRowValue(panel.description_row, buildUnitDescription(unit, terrain, overlay, game, position));
@@ -1040,7 +1190,10 @@ public class StartApp extends Application {
         StringBuilder text = new StringBuilder();
         text.append("Move: ").append(move_count).append(" reachable tiles.");
         text.append("\nAttack: ").append(attack_count).append(" available targets.");
-        text.append("\nWait: click the selected unit again to end its action.");
+        if (game.canCaptureBuilding(position)) {
+            text.append("\nCapture: this infantry can capture the current building.");
+        }
+        text.append("\nWait: click the selected unit again or use the Wait button to end its action.");
 
         if (unit.hasMovedThisTurn()) {
             text.append("\nThis unit has already moved, so only remaining legal attacks are shown.");
@@ -1324,7 +1477,12 @@ public class StartApp extends Application {
      * @param chosen_player Which faction the human chose in the startup menu
      */
     private static void updateTurnLabel(Label turnLabel, Game game, String chosen_player) {
-        String chosen_player_name = "P1".equals(chosen_player) ? "Soviets (P1)" : "Germans (P2)";
+        String chosen_player_name;
+        if ("BOT".equals(chosen_player)) {
+            chosen_player_name = "Bot vs Bot";
+        } else {
+            chosen_player_name = "P1".equals(chosen_player) ? "Soviets (P1)" : "Germans (P2)";
+        }
 
         String winner = game.getWinner();
         if (winner != null) {
@@ -1354,16 +1512,17 @@ public class StartApp extends Application {
     }
 
     /**
-     * @brief Update the reply label
+     * @brief Update the replay label
      *
      * @param replayLabel The label to be updated
-     * @param game The game from which to read the active turn
+     * @param game The game from which to read replay state
      */
     private static void updateReplayLabel(Label replayLabel, Game game){
-        if(game.isReplayMode())
-            replayLabel.setText("*Replay mode");
-        else
+        if (game.isReplayMode()) {
+            replayLabel.setText("*Replay mode: use Next replay turn / Prev turn");
+        } else {
             replayLabel.setText("");
+        }
     }
 
     /**

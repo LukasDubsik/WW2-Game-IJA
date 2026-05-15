@@ -1,3 +1,8 @@
+/**
+ * @file Game.java
+ * @author Team
+ * @brief Source file Game.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.game;
 
 import java.util.ArrayDeque;
@@ -11,7 +16,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
-import app.StartApp;
 import bot.Bot;
 import model.map.Building;
 import model.map.Serializable.GameMap;
@@ -89,14 +93,17 @@ public class Game {
     public Game(String[] players, Replay replay){
         this.gameMap = replay.getMap();
         this.replay = new Replay(replay);
-        this.units_map.putAll(replay.getUnits());
 
-        // Heal all damaged units in the replay
-        for(Map.Entry<Position, Unit> entry : units_map.entrySet()){
-            Unit unit = entry.getValue();
-            unit.setCurrentHp(unit.getUnitType().getMaxHP());
-
+        // Restore initial replay units as independent objects
+        for (Map.Entry<Position, Unit> entry : replay.getUnits().entrySet()) {
+            Unit unit = new Unit(entry.getValue());
             unit.setPosition(entry.getKey());
+            units_map.put(entry.getKey(), unit);
+        }
+
+        // Restore initial replay building ownership/capture state
+        for (Map.Entry<Position, Building> entry : replay.getBuildings().entrySet()) {
+            buildings.put(entry.getKey(), new Building(entry.getValue()));
         }
 
         // Set each player's starting money
@@ -106,8 +113,10 @@ public class Game {
         // Loaded replay is running in replay mode
         replayMode = true;
 
-        // Set the initial ownership of buildings
-        setOwnership();
+        // Backward compatibility for old replays without explicit buildings
+        if (buildings.isEmpty()) {
+            setOwnership();
+        }
     }
 
     /**
@@ -360,8 +369,8 @@ public class Game {
         // Check whether the unit can still attack after moving
         List<Position> attackable_tiles = getAttackableTiles(to);
 
-        // If there are no legal attacks left, finish the action immediately
-        if (attackable_tiles.isEmpty()) {
+        // If there are no legal attacks or capture action left, finish the action immediately
+        if (attackable_tiles.isEmpty() && !canCaptureBuilding(to)) {
             unit.setAlreadyPlayed(true);
         }
 
@@ -410,10 +419,11 @@ public class Game {
         // Run the path search
         SearchResult result = runMovementSearch(unit, pos);
 
-        // Collect all reachable tiles except the origin
+        // Collect all reachable end tiles except the origin. Friendly units may
+        // be crossed during the search, but no unit may be the final tile.
         List<Position> reachable = new ArrayList<>();
         for (Position tile : result.best.keySet()) {
-            if (!tile.equals(pos)) {
+            if (!tile.equals(pos) && !units_map.containsKey(tile)) {
                 reachable.add(tile);
             }
         }
@@ -526,7 +536,11 @@ public class Game {
     }
 
     /**
-     * @brief Get all neighboring tiles around the given tile on the hex map
+     * @brief Get all neighboring tiles around the given tile
+     * 
+     * The game board is drawn as an offset hex grid, therefore movement and
+     * attack distance use six neighboring hexes. Odd rows are shifted to the
+     * right, so the diagonal neighbors depend on the row parity.
      * 
      * @param pos The position whose neighbors we want
      * @return List of all neighboring tiles
@@ -537,7 +551,6 @@ public class Game {
         int row = pos.row();
         int col = pos.column();
 
-        // Even and odd rows are shifted differently in the hex map
         if (row % 2 == 0) {
             neighbors.add(new Position(row - 1, col - 1));
             neighbors.add(new Position(row - 1, col));
@@ -579,35 +592,42 @@ public class Game {
             }
         }
 
-        // If running replay mode, advance the replay and do not generate new turn effects
+        // If running replay mode, apply the recorded turn directly.
+        // Do not call normal gameplay methods such as buyUnit(), because those
+        // validate current UI/game state and can reject a historically recorded action.
         if (replayMode) {
             TurnRecord turnRecord = (replay != null) ? replay.getCurrentTurn() : null;
+
             if (turnRecord != null) {
-                revertActions(turnRecord, false);
+                // Use the recorded player if the turn contains that information
+                if (turnRecord.getIncomeRecord() != null) {
+                    this.current_player = turnRecord.getIncomeRecord().player();
+                }
+
+                applyIncomeForward(turnRecord);
+                applyRepairsForward(turnRecord);
+                applyActionsForward(turnRecord);
+                applyBuildingChangesForward(turnRecord);
+
                 replay.advanceTurn();
             }
 
             replayMode = replay != null && !replay.isAtEnd();
             this.current_player = swapPlayers(this.current_player);
             this.current_turn++;
+
             notifyObservers(new GameEvent());
             return;
         }
 
-        TurnRecord currentTurnRecord = (!wasReplaying && replay != null) ? replay.getCurrentTurn() : null;
+        TurnRecord endingTurnRecord = (!wasReplaying && replay != null) ? replay.getCurrentTurn() : null;
 
-        // End-of-turn repairs for the player who just played
-        repairUnitsForPlayer(ending_player, currentTurnRecord);
+        // Reset abandoned capture progress before the next player starts
+        resetAbandonedCaptures(endingTurnRecord);
 
-        // End-of-turn capture for the player who just played
-        processCapturesForPlayer(ending_player, currentTurnRecord);
-
-        // End-of-turn income for the player who just played
-        int income = addIncomeForPlayer(ending_player);
-
-        // Store the completed turn before switching to the next player
+        // Store the completed action phase before switching to the next player
         if (!wasReplaying && replay != null) {
-            replay.addNextTurn(ending_player, income);
+            replay.addNextTurn(ending_player, 0);
         }
 
         // Switch the active player
@@ -624,6 +644,14 @@ public class Game {
             }
         }
 
+        // Start-of-turn repair and income for the now-active player
+        TurnRecord startedTurnRecord = (!wasReplaying && replay != null) ? replay.getCurrentTurn() : null;
+        repairUnitsForPlayer(this.current_player, startedTurnRecord);
+        int income = addIncomeForPlayer(this.current_player);
+        if (startedTurnRecord != null) {
+            startedTurnRecord.setIncomeRecord(this.current_player, income);
+        }
+
         // Let bot 1 play
         if (p1Bot && this.current_player.equals("P1") && !isGameFinished()) {
             Bot.makeTurn(this, new Game(this), this.current_player);
@@ -635,6 +663,172 @@ public class Game {
         }
 
         notifyObservers(new GameEvent());
+    }
+
+        /**
+     * @brief Apply recorded player income when moving forward in replay mode
+     *
+     * @param turnRecord Turn record to apply
+     */
+    private void applyIncomeForward(TurnRecord turnRecord) {
+        if (turnRecord == null || turnRecord.getIncomeRecord() == null) {
+            return;
+        }
+
+        String player = turnRecord.getIncomeRecord().player();
+        int income = turnRecord.getIncomeRecord().income();
+
+        playerWealth.put(player, playerWealth.getOrDefault(player, STARTING_WEALTH) + income);
+    }
+
+    /**
+     * @brief Apply recorded repairs when moving forward in replay mode
+     *
+     * @param turnRecord Turn record to apply
+     */
+    private void applyRepairsForward(TurnRecord turnRecord) {
+        if (turnRecord == null) {
+            return;
+        }
+
+        for (RepairRecord repairRecord : turnRecord.getRepairList()) {
+            Unit unit = getUnit(repairRecord.position());
+
+            // If the unit is no longer present, do not crash the replay UI.
+            // The replay can still continue to show all other recorded events.
+            if (unit == null) {
+                System.err.println("Replay warning: missing repaired unit at " + repairRecord.position());
+                continue;
+            }
+
+            int new_hp = Math.min(
+                    unit.getUnitType().getMaxHP(),
+                    unit.getCurrentHp() + repairRecord.amount()
+            );
+
+            unit.setCurrentHp(new_hp);
+            playerWealth.put(unit.getOwner(), playerWealth.get(unit.getOwner()) - repairRecord.cost());
+        }
+    }
+
+    /**
+     * @brief Apply recorded actions when moving forward in replay mode
+     *
+     * This intentionally does not call normal gameplay methods such as buyUnit()
+     * or attackUnit(), because replay playback should reproduce recorded events,
+     * not re-check whether the action is currently legal.
+     *
+     * @param turnRecord Turn record to apply
+     */
+    private void applyActionsForward(TurnRecord turnRecord) {
+        if (turnRecord == null) {
+            return;
+        }
+
+        ArrayList<Action> actionList = turnRecord.getActionList();
+
+        for (Action action : actionList) {
+            if (action.getActionEnum() == Action.ActionEnum.DAMAGE) {
+                DamageRecord damageRecord = action.getDamageRecord();
+                Unit unit = getUnit(damageRecord.position());
+
+                if (unit == null) {
+                    System.err.println("Replay warning: missing damaged unit at " + damageRecord.position());
+                    continue;
+                }
+
+                unit.takeDamage(damageRecord.damage());
+
+                if (unit.isDestroyed()) {
+                    units_map.remove(unit.getPosition());
+                }
+            }
+            else if (action.getActionEnum() == Action.ActionEnum.MOVE) {
+                MoveRecord moveRecord = action.getMoveRecord();
+
+                Unit unit = units_map.remove(moveRecord.pos1());
+                if (unit == null) {
+                    System.err.println("Replay warning: missing moved unit at " + moveRecord.pos1());
+                    continue;
+                }
+
+                unit.setPosition(moveRecord.pos2());
+                unit.setMovedThisTurn(true);
+                units_map.put(moveRecord.pos2(), unit);
+            }
+            else if (action.getActionEnum() == Action.ActionEnum.BUY) {
+                UnitPurchaseRecord unitPurchaseRecord = action.getUnitPurchaseRecord();
+                UnitType unitType = unitPurchaseRecord.unitType();
+                Position position = unitPurchaseRecord.position();
+
+                String owner = unitType.isSovietUnit() ? "P1" : "P2";
+
+                // During replay playback, recreate the purchased unit directly.
+                // If the tile is already occupied, keep the existing state and warn.
+                if (units_map.containsKey(position)) {
+                    System.err.println("Replay warning: purchase tile already occupied at " + position);
+                    continue;
+                }
+
+                Unit unit = new Unit(unitType, owner, position);
+                unit.setMovedThisTurn(true);
+                unit.setAlreadyPlayed(true);
+
+                units_map.put(position, unit);
+                playerWealth.put(owner, playerWealth.getOrDefault(owner, STARTING_WEALTH) - unitType.getPrice());
+            }
+            else if (action.getActionEnum() == Action.ActionEnum.DESTROY) {
+                units_map.remove(action.getDestroyPosition());
+            }
+        }
+    }
+
+    /**
+     * @brief Apply recorded building changes when moving forward in replay mode
+     *
+     * @param turnRecord Turn record to apply
+     */
+    private void applyBuildingChangesForward(TurnRecord turnRecord) {
+        if (turnRecord == null) {
+            return;
+        }
+
+        for (BuildingIntegrityRecord bir : turnRecord.getBirList()) {
+            Position position = bir.buildingPos();
+            Building building = getBuilding(position);
+
+            if (building == null) {
+                Terrain terrain = getTerrain(position);
+
+                if (!Terrain.isBuilding(terrain)) {
+                    System.err.println("Replay warning: building record on non-building tile " + position);
+                    continue;
+                }
+
+                String owner = bir.prevOwner() == null ? "N" : bir.prevOwner();
+                building = new Building(owner, terrain);
+                buildings.put(position, building);
+            }
+
+            int new_integrity = building.getIntegrity() + bir.change();
+
+            // If capture finished, infer the new owner from the infantry standing
+            // on the building. This matches how capture is represented in the log.
+            if (new_integrity >= building.getMaxIntegrity()) {
+                Unit occupying_unit = getUnit(position);
+
+                if (occupying_unit != null
+                        && isCaptureUnit(occupying_unit)
+                        && !occupying_unit.getOwner().equals(building.getOwner())) {
+                    building.setOwner(occupying_unit.getOwner());
+                }
+
+                building.setIntegrity(building.getMaxIntegrity());
+            }
+            else {
+                building.setIntegrity(Math.max(0, new_integrity));
+            }
+        }
     }
 
     /**
@@ -773,7 +967,7 @@ public class Game {
             if(unit == null)
                 throw new RuntimeException("Failed to get a unit to repair at " + repairRecord.position());
 
-            unit.setCurrentHp(unit.getCurrentHp() - 20);
+            unit.setCurrentHp(unit.getCurrentHp() - repairRecord.amount());
             playerWealth.put(unit.getOwner(), playerWealth.get(unit.getOwner()) + repairRecord.cost());
         }
     }
@@ -866,8 +1060,10 @@ public class Game {
                     continue;
                 }
 
-                // Ignore occupied positions
-                if (units_map.containsKey(neigh)) {
+                // Enemy units block movement. Friendly units are pass-through,
+                // but they are filtered out as valid end positions later.
+                Unit occupying_unit = units_map.get(neigh);
+                if (occupying_unit != null && !occupying_unit.getOwner().equals(unit.getOwner())) {
                     continue;
                 }
 
@@ -962,11 +1158,19 @@ public class Game {
             return new ArrayList<>();
         }
 
-        // End must be inside map and unoccupied
+        // End must be inside map
         if (!isInside(to)) {
             return new ArrayList<>();
         }
 
+        // Staying in place is a valid zero-length move for action selection
+        if (from.equals(to)) {
+            List<Position> path = new ArrayList<>();
+            path.add(from);
+            return path;
+        }
+
+        // Friendly units may be crossed, but no occupied tile may be the final tile
         if (units_map.containsKey(to)) {
             return new ArrayList<>();
         }
@@ -1203,98 +1407,134 @@ public class Game {
                 continue;
             }
 
-            int repairCost = Math.max(100, (int) (unit.getUnitType().getPrice() / 10.0));
+            int missingHp = unit.getUnitType().getMaxHP() - unit.getCurrentHp();
+            int repairAmount = Math.min(20, missingHp);
+            int repairCost = (int) Math.ceil(unit.getUnitType().getPrice() * (repairAmount / 100.0));
             int ownerWealth = playerWealth.get(unit.getOwner());
 
             if (ownerWealth < repairCost) {
                 continue;
             }
 
-            unit.setCurrentHp(Math.min(unit.getCurrentHp() + 20, unit.getUnitType().getMaxHP()));
+            unit.setCurrentHp(unit.getCurrentHp() + repairAmount);
             playerWealth.put(unit.getOwner(), ownerWealth - repairCost);
 
             if (currentTurnRecord != null) {
-                currentTurnRecord.addRepairedUnit(position, repairCost);
+                currentTurnRecord.addRepairedUnit(position, repairCost, repairAmount);
             }
         }
     }
 
     /**
-     * @brief Process building capture for the player whose turn is ending
+     * @brief Reset capture progress on buildings where no enemy infantry remains
      *
-     * @param player The player whose infantry can capture this turn
+     * Capture progress is kept only while enemy infantry physically stays on the
+     * building. If the infantry leaves or is destroyed, the capture points reset.
+     *
      * @param currentTurnRecord Replay record for the completed turn
      */
-    private void processCapturesForPlayer(String player, TurnRecord currentTurnRecord) {
-        // Reset partial capture progress where the current player is not actively capturing
+    private void resetAbandonedCaptures(TurnRecord currentTurnRecord) {
         buildings.forEach((position, building) -> {
             if (building.isFull()) {
                 return;
             }
 
             Unit unit = getUnit(position);
+            boolean enemy_infantry_still_present = unit != null
+                    && isCaptureUnit(unit)
+                    && !unit.getOwner().equals(building.getOwner());
 
-            if (unit == null || !unit.getOwner().equals(player) || !isCaptureUnit(unit) || unit.getOwner().equals(building.getOwner())) {
-                if (currentTurnRecord != null) {
-                    currentTurnRecord.addBir(position, building.getMaxIntegrity() - building.getIntegrity(), building.getOwner());
-                }
-
+            if (!enemy_infantry_still_present) {
+                int old_integrity = building.getIntegrity();
                 building.setIntegrity(building.getMaxIntegrity());
+
+                if (currentTurnRecord != null) {
+                    currentTurnRecord.addBir(position, building.getIntegrity() - old_integrity, building.getOwner());
+                }
             }
         });
+    }
 
-        // Capture logic - infantry only
-        for (Unit unit : units_map.values()) {
-            if (!unit.getOwner().equals(player)) {
-                continue;
-            }
-
-            if (!isCaptureUnit(unit)) {
-                continue;
-            }
-
-            Position unitPosition = unit.getPosition();
-            Terrain terrain = getTerrain(unitPosition);
-
-            if (!Terrain.isBuilding(terrain)) {
-                continue;
-            }
-
-            Building building = getBuilding(unitPosition);
-
-            // Neutral / untracked building becomes owned immediately on first infantry occupation
-            if (building == null) {
-                buildings.put(unitPosition, new Building(unit.getOwner(), terrain));
-
-                if (currentTurnRecord != null) {
-                    currentTurnRecord.addBir(unitPosition, 0, null);
-                }
-
-                continue;
-            }
-
-            if (!unit.getOwner().equals(building.getOwner())) {
-                String previousOwner = building.getOwner();
-                building.setIntegrity(building.getIntegrity() - 1);
-
-                if (building.getIntegrity() <= 0) {
-                    building.setOwner(player);
-                    building.setIntegrity(building.getMaxIntegrity());
-
-                    if (currentTurnRecord != null) {
-                        currentTurnRecord.addBir(unitPosition, -1 + building.getMaxIntegrity(), previousOwner);
-                    }
-
-                    if (building.isHQ()) {
-                        StartApp.updateScreen(this);
-                    }
-                } else {
-                    if (currentTurnRecord != null) {
-                        currentTurnRecord.addBir(unitPosition, -1, previousOwner);
-                    }
-                }
-            }
+    /**
+     * @brief Check whether the selected infantry can capture its current building
+     *
+     * @param unit_position Position of the infantry unit
+     * @return True if capture is currently legal
+     */
+    public boolean canCaptureBuilding(Position unit_position) {
+        if (isGameFinished() || unit_position == null) {
+            return false;
         }
+
+        Unit unit = getUnit(unit_position);
+        if (unit == null || unit.hasAlreadyPlayed()) {
+            return false;
+        }
+
+        if (!unit.getOwner().equals(this.current_player)) {
+            return false;
+        }
+
+        if (!isCaptureUnit(unit)) {
+            return false;
+        }
+
+        Terrain terrain = getTerrain(unit_position);
+        if (!Terrain.isBuilding(terrain)) {
+            return false;
+        }
+
+        Building building = getBuilding(unit_position);
+        return building == null || !unit.getOwner().equals(building.getOwner());
+    }
+
+    /**
+     * @brief Perform the capture action with the selected infantry unit
+     *
+     * The building has 20 capture points. Each capture action reduces them by
+     * floor(10 percent of current infantry HP), so 100 HP infantry captures in
+     * two actions, and 50 HP infantry in four actions.
+     *
+     * @param unit_position Position of the capturing infantry
+     * @return True if capture was applied
+     */
+    public boolean captureBuilding(Position unit_position) {
+        if (!canCaptureBuilding(unit_position)) {
+            return false;
+        }
+
+        Unit unit = getUnit(unit_position);
+        Terrain terrain = getTerrain(unit_position);
+        Building building = getBuilding(unit_position);
+
+        if (building == null) {
+            building = new Building("N", terrain);
+            buildings.put(unit_position, building);
+        }
+
+        String previous_owner = building.getOwner();
+        int old_integrity = building.getIntegrity();
+        int capture_amount = Math.max(1, unit.getCurrentHp() / 10);
+
+        building.setIntegrity(old_integrity - capture_amount);
+
+        if (building.getIntegrity() <= 0) {
+            building.setOwner(unit.getOwner());
+            building.setIntegrity(building.getMaxIntegrity());
+        }
+
+        unit.setAlreadyPlayed(true);
+
+        if (!replayMode && replay != null && replay.getCurrentTurn() != null) {
+            replay.getCurrentTurn().addBir(
+                    unit_position,
+                    building.getIntegrity() - old_integrity,
+                    previous_owner
+            );
+        }
+
+        notifyObservers(new GameEvent(GameEvent.Type.BUILDING_CAPTURED, unit, unit_position, unit_position));
+        return true;
     }
 
     /**
@@ -1533,34 +1773,54 @@ public class Game {
      * @return The final damage after defence reduction
      */
     private int computeAttackDamage(Unit attacker, Position attacker_position, Position defender_position) {
-        // Get the unit that is being attacked
-        Unit defender = this.units_map.get(defender_position);
-        if (defender == null) {
+        if (attacker == null) {
             return 0;
         }
 
-        // Compute the geometric attack distance
+        return computeAttackDamageWithHp(attacker, attacker.getCurrentHp(), attacker_position, defender_position);
+    }
+
+    /**
+     * @brief Compute deterministic assignment-style damage with a chosen attacker HP
+     *
+     * Damage = baseDamage * attackerHP/100 * (1 - terrainBonus*0.1).
+     * The base damage is provided by the unit armament table. This keeps the
+     * richer weapon model while still applying the required HP and defence formula.
+     *
+     * @param attacker The attacking unit
+     * @param attacker_hp The HP to use for the attack strength
+     * @param attacker_position The position of the attacker
+     * @param defender_position The position of the defender
+     * @return Final rounded-down damage
+     */
+    private int computeAttackDamageWithHp(Unit attacker, int attacker_hp, Position attacker_position, Position defender_position) {
+        Unit defender = this.units_map.get(defender_position);
+        if (attacker == null || defender == null) {
+            return 0;
+        }
+
         int distance = getTileDistance(attacker_position, defender_position);
         if (distance == Integer.MAX_VALUE) {
             return 0;
         }
 
-        // Determine the broad target class
-        TargetClass target_class = getTargetClass(defender.getUnitType());
-
-        // Get the computed armament-based attack value
         int base_damage = attacker.getUnitType().getComputedDamageAgainst(defender.getUnitType(), distance);
-
-        // Reduce the damage by the tile defence
-        int defence_bonus = getCombinedDefenceBonus(defender_position);
-        int reduced_damage = base_damage - defence_bonus * 2;
-
-        // Always deal at least one damage if the attack was legal
-        if (reduced_damage < 1) {
-            reduced_damage = 1;
+        if (base_damage <= 0) {
+            return 0;
         }
 
-        return reduced_damage;
+        int defence_bonus = getCombinedDefenceBonus(defender_position);
+        double hp_factor = Math.max(0.0, Math.min(1.0, attacker_hp / 100.0));
+        double defence_factor = Math.max(0.0, 1.0 - defence_bonus * 0.1);
+
+        int damage = (int) Math.floor(base_damage * hp_factor * defence_factor);
+
+        // A legal non-zero base attack should always chip at least one HP
+        if (damage < 1) {
+            damage = 1;
+        }
+
+        return damage;
     }
 
 
@@ -1627,7 +1887,7 @@ public class Game {
             return 0;
         }
 
-        return computeAttackDamage(defender, target_position, attacker_position);
+        return computeAttackDamageWithHp(defender, defender.getCurrentHp() - attack_damage, target_position, attacker_position);
     }
 
     /**
@@ -1813,7 +2073,7 @@ public class Game {
             throw new IllegalArgumentException("Building owner cannot be empty.");
         }
 
-        if (!"P1".equals(owner) && !"P2".equals(owner)) {
+        if (!"P1".equals(owner) && !"P2".equals(owner) && !"N".equals(owner)) {
             throw new IllegalArgumentException("Unsupported building owner: " + owner);
         }
 
@@ -2038,4 +2298,25 @@ public class Game {
 
         return null;
     }
+    /**
+     * @brief Check whether the currently active player is controlled by the bot
+     *
+     * @return True if the current player is a bot
+     */
+    public boolean isCurrentPlayerBot() {
+        return ("P1".equals(this.current_player) && p1Bot)
+                || ("P2".equals(this.current_player) && p2Bot);
+    }
+
+    /**
+     * @brief Start the bot turn if the currently active player is a bot
+     */
+    public void playCurrentBotTurnIfActive() {
+        if (isGameFinished() || !isCurrentPlayerBot()) {
+            return;
+        }
+
+        Bot.makeTurn(this, new Game(this), this.current_player);
+    }
+
 }

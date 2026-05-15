@@ -1,3 +1,8 @@
+/**
+ * @file WeaponTag.java
+ * @author Team
+ * @brief Source file WeaponTag.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.unit;
 
 /**

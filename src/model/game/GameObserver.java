@@ -1,3 +1,8 @@
+/**
+ * @file GameObserver.java
+ * @author Team
+ * @brief Source file GameObserver.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.game;
 
 /**

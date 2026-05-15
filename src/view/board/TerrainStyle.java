@@ -1,3 +1,8 @@
+/**
+ * @file TerrainStyle.java
+ * @author Team
+ * @brief Source file TerrainStyle.java for the IJA Advance-Wars-inspired game project.
+ */
 package view.board;
 
 import java.util.Objects;

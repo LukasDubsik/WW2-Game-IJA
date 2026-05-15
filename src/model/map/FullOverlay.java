@@ -1,3 +1,8 @@
+/**
+ * @file FullOverlay.java
+ * @author Team
+ * @brief Source file FullOverlay.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map;
 
 import model.map.Serializable.Overlay;

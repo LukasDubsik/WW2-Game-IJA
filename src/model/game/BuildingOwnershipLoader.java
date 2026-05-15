@@ -1,3 +1,8 @@
+/**
+ * @file BuildingOwnershipLoader.java
+ * @author Team
+ * @brief Source file BuildingOwnershipLoader.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.game;
 
 import java.io.IOException;

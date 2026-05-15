@@ -1,3 +1,8 @@
+/**
+ * @file GameEvent.java
+ * @author Team
+ * @brief Source file GameEvent.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.game;
 
 import model.map.Serializable.Position;
@@ -20,6 +25,7 @@ public class GameEvent {
         UNIT_DESTROYED,
         UNIT_PURCHASED,
         BUILDING_CHANGED,
+        BUILDING_CAPTURED,
         TURN_CHANGED,
         GAME_FINISHED
     }

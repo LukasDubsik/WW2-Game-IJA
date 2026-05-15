@@ -1,12 +1,22 @@
+/**
+ * @file TurnRecord.java
+ * @author Team
+ * @brief Source file TurnRecord.java for the IJA Advance-Wars-inspired game project.
+ */
 package replay;
+
+import java.io.Serializable;
+import java.util.ArrayList;
 
 import model.map.Serializable.Position;
 import model.unit.Unit;
 import model.unit.UnitType;
-import replay.records.*;
-
-import java.io.Serializable;
-import java.util.ArrayList;
+import replay.records.BuildingIntegrityRecord;
+import replay.records.DamageRecord;
+import replay.records.IncomeRecord;
+import replay.records.MoveRecord;
+import replay.records.RepairRecord;
+import replay.records.UnitPurchaseRecord;
 
 /**
  * @class TurnRecord
@@ -147,5 +157,16 @@ public class TurnRecord implements Serializable {
      */
     public void addRepairedUnit(Position position, int cost){
         repairList.add(new RepairRecord(position, cost));
+    }
+
+    /**
+     * @brief Adds a new record of a repaired unit with exact repaired HP amount
+     *
+     * @param position Position of the repaired unit
+     * @param cost Cost of the repair
+     * @param amount Amount of restored HP
+     */
+    public void addRepairedUnit(Position position, int cost, int amount){
+        repairList.add(new RepairRecord(position, cost, amount));
     }
 }

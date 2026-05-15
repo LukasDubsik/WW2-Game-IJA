@@ -1,3 +1,8 @@
+/**
+ * @file MapElement.java
+ * @author Team
+ * @brief Source file MapElement.java for the IJA Advance-Wars-inspired game project.
+ */
 package model.map;
 
 import model.map.Serializable.Overlay;

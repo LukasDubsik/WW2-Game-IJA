@@ -1,11 +1,21 @@
+/**
+ * @file FileUtil.java
+ * @author Team
+ * @brief Source file FileUtil.java for the IJA Advance-Wars-inspired game project.
+ */
 package app;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Platform;
 import javafx.stage.FileChooser;
 import replay.Replay;
-
-import java.io.*;
-import java.util.concurrent.CompletableFuture;
 
 public class FileUtil {
 
