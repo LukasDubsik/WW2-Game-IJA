@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -229,27 +228,22 @@ public class StartApp extends Application {
         return new Scene(root, 1100, 700);
     }
 
-    /**
-     * @brief Open one selected scenario from the startup menu
-     * 
-     * @param stage The application stage
-     * @param scenario The chosen scenario
-     * @param chosen_player Which faction the user wants to play
-     */
-    private void openScenario(Stage stage, ScenarioDefinition scenario, String chosen_player) {
+        private void openScenario(Stage stage, ScenarioDefinition scenario, String chosen_player) {
         // Check that the scenario exists
         if (scenario == null) {
             throw new IllegalArgumentException("Scenario cannot be null.");
         }
 
-        // Create the base game from the selected map
-        Game loaded_game = GameFactory.createGame(scenario.map_path);
-
-        // Place the scenario units
-        scenario.setup_function.accept(loaded_game);
+        // Create the fully initialized scenario from map + unit placement file
+        Game loaded_game = GameFactory.createGame(scenario.map_path, scenario.units_path);
 
         // Let the chosen faction start
         loaded_game.setCurrentPlayer(chosen_player);
+
+        // The selected faction is controlled by the human player.
+        // The other faction is controlled by the bot.
+        loaded_game.setPlayerBot("P1", !"P1".equals(chosen_player));
+        loaded_game.setPlayerBot("P2", !"P2".equals(chosen_player));
 
         // Store globally for the rest of the application
         StartApp.game = loaded_game;
@@ -272,74 +266,14 @@ public class StartApp extends Application {
                 new ScenarioDefinition(
                         "Balga / Heiligenbeil corridor",
                         Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.map"),
-                        StartApp::setupBalgaScenarioUnits
+                        Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.units")
                 ),
                 new ScenarioDefinition(
                         "Allenstein lakes approaches",
                         Path.of("lib/maps/allenstein_lakes_approaches_1945_large.map"),
-                        StartApp::setupAllensteinScenarioUnits
+                        Path.of("lib/maps/allenstein_lakes_approaches_1945_large.units")
                 )
         );
-    }
-
-    /**
-     * @brief Place the starting units for the Balga / Heiligenbeil scenario
-     * 
-     * @param game The game to populate
-     */
-    private static void setupBalgaScenarioUnits(Game game) {
-        // P1 - Soviet attacking force pressing from the west
-        game.createUnit("BA-64 Armored Car", "P1", 8, 0);
-        game.createUnit("M3 Half-track", "P1", 9, 2);
-        game.createUnit("IS-1 Heavy Tank", "P1", 10, 2);
-        game.createUnit("IS-1 Heavy Tank", "P1", 11, 0);
-        game.createUnit("ZiS-3 Field Gun", "P1", 12, 1);
-        game.createUnit("DP-27 Team", "P1", 5, 1);
-        game.createUnit("Soviet Assault Sapper Squad", "P1", 6, 3);
-        game.createUnit("Soviet Assault Sapper Squad", "P1", 3, 3);
-        game.createUnit("DP-27 Team", "P1", 9, 0);
-
-        // P2 - German pocket defence toward the coast
-        game.createUnit("Panzer IV Ausf. J", "P2", 8, 24);
-        game.createUnit("Panzer IV Ausf. J", "P2", 12, 24);
-        game.createUnit("Sd.Kfz. 251/1 Half-track", "P2", 7, 25);
-        game.createUnit("Sd.Kfz. 234/2 Puma", "P2", 5, 23);
-        game.createUnit("MG 42 Team", "P2", 2, 20);
-        game.createUnit("Grenadier Squad", "P2", 3, 20);
-        game.createUnit("Wehrmacht Rifle Squad", "P2", 4, 24);
-        game.createUnit("Grenadier Squad", "P2", 9, 19);
-        game.createUnit("MG 42 Team", "P2", 13, 24);
-        game.createUnit("Wehrmacht Rifle Squad", "P2", 11, 23);
-    }
-
-    /**
-     * @brief Place the starting units for the Allenstein scenario
-     * 
-     * @param game The game to populate
-     */
-    private static void setupAllensteinScenarioUnits(Game game) {
-        // P1 - Soviet attacking force from the west / south-west
-        game.createUnit("BA-64 Armored Car", "P1", 8, 0);
-        game.createUnit("M3 Half-track", "P1", 9, 1);
-        game.createUnit("IS-1 Heavy Tank", "P1", 10, 2);
-        game.createUnit("IS-1 Heavy Tank", "P1", 11, 0);
-        game.createUnit("ZiS-3 Field Gun", "P1", 12, 2);
-        game.createUnit("DP-27 Team", "P1", 7, 1);
-        game.createUnit("Soviet Assault Sapper Squad", "P1", 6, 2);
-        game.createUnit("DP-27 Team", "P1", 10, 0);
-        game.createUnit("Soviet Assault Sapper Squad", "P1", 12, 1);
-
-        // P2 - German delaying defence around important nodes
-        game.createUnit("Wehrmacht Rifle Squad", "P2", 3, 1);
-        game.createUnit("MG 42 Team", "P2", 4, 0);
-        game.createUnit("Grenadier Squad", "P2", 3, 2);
-        game.createUnit("Panzer IV Ausf. J", "P2", 6, 4);
-        game.createUnit("Sd.Kfz. 234/2 Puma", "P2", 7, 5);
-        game.createUnit("Sd.Kfz. 251/1 Half-track", "P2", 10, 4);
-        game.createUnit("MG 42 Team", "P2", 10, 18);
-        game.createUnit("Grenadier Squad", "P2", 7, 22);
-        game.createUnit("Panzer IV Ausf. J", "P2", 13, 25);
-        game.createUnit("Wehrmacht Rifle Squad", "P2", 13, 26);
     }
 
     /**
@@ -422,12 +356,12 @@ public class StartApp extends Application {
             centered_pane.setMinSize(new_bounds.getWidth(), new_bounds.getHeight());
         });
 
-        // Add handler for scrolling
+        // Add handler for scrolling. Use a continuous zoom factor instead of
+        // one fixed zoom step per wheel event.
         scroller.addEventFilter(ScrollEvent.SCROLL, event -> {
-            if (event.getDeltaY() > 0) {
-                zoomKeepingViewportCenter(canvas, scroller, true);
-            } else if (event.getDeltaY() < 0) {
-                zoomKeepingViewportCenter(canvas, scroller, false);
+            if (Math.abs(event.getDeltaY()) > 0.01) {
+                double zoom_factor = Math.pow(1.0015, event.getDeltaY());
+                zoomKeepingViewportCenter(canvas, scroller, zoom_factor);
             }
 
             event.consume();
@@ -1303,7 +1237,7 @@ public class StartApp extends Application {
      * @param scroller The scroll pane showing the canvas
      * @param zoom_in True if zooming in, false if zooming out
      */
-    private static void zoomKeepingViewportCenter(GameCanvas canvas, ScrollPane scroller, boolean zoom_in) {
+    private static void zoomKeepingViewportCenter(GameCanvas canvas, ScrollPane scroller, double zoom_factor) {
         double old_width = canvas.getWidth();
         double old_height = canvas.getHeight();
 
@@ -1321,10 +1255,9 @@ public class StartApp extends Application {
                 ? scroller.getVvalue() * old_extra_height + viewport_height / 2.0
                 : old_height / 2.0;
 
-        if (zoom_in) {
-            canvas.zoomIn();
-        } else {
-            canvas.zoomOut();
+        boolean zoom_changed = canvas.zoomBy(zoom_factor);
+        if (!zoom_changed) {
+            return;
         }
 
         double new_width = canvas.getWidth();
@@ -1459,29 +1392,29 @@ public class StartApp extends Application {
         setInitialFactoryButtonFont(panel.M3_HALFTRACK);
         setInitialFactoryButtonFont(panel.BA_64_ARMORED_CAR);
 
-        // P1 shop
+        // P1 shop = Soviets
         panel.factory_shop_grid_P1 = new GridPane();
         panel.factory_shop_grid_P1.setHgap(5);
         panel.factory_shop_grid_P1.setVgap(5);
-        panel.factory_shop_grid_P1.add(panel.WEHRMACHT_RIFLE_SQUAD, 0, 0);
-        panel.factory_shop_grid_P1.add(panel.GRENADIER_SQUAD, 1, 0);
-        panel.factory_shop_grid_P1.add(panel.MG42_TEAM, 2, 0);
-        panel.factory_shop_grid_P1.add(panel.SDKFZ_251_HALFTRACK, 0, 1);
-        panel.factory_shop_grid_P1.add(panel.PANZER_IV_AUSF_J, 1, 1);
-        panel.factory_shop_grid_P1.add(panel.SDKFZ_234_2_PUMA, 2, 1);
+        panel.factory_shop_grid_P1.add(panel.SOVIET_ASSAULT_SAPPER_SQUAD, 0, 0);
+        panel.factory_shop_grid_P1.add(panel.DP27_TEAM, 1, 0);
+        panel.factory_shop_grid_P1.add(panel.ZIS_3_FIELD_GUN, 2, 0);
+        panel.factory_shop_grid_P1.add(panel.IS_1_HEAVY_TANK, 0, 1);
+        panel.factory_shop_grid_P1.add(panel.M3_HALFTRACK, 1, 1);
+        panel.factory_shop_grid_P1.add(panel.BA_64_ARMORED_CAR, 2, 1);
         panel.factory_shop_grid_P1.setVisible(false);
         panel.factory_shop_grid_P1.setManaged(false);
 
-        // P2 shop
+        // P2 shop = Germans
         panel.factory_shop_grid_P2 = new GridPane();
         panel.factory_shop_grid_P2.setHgap(5);
         panel.factory_shop_grid_P2.setVgap(5);
-        panel.factory_shop_grid_P2.add(panel.SOVIET_ASSAULT_SAPPER_SQUAD, 0, 0);
-        panel.factory_shop_grid_P2.add(panel.DP27_TEAM, 1, 0);
-        panel.factory_shop_grid_P2.add(panel.ZIS_3_FIELD_GUN, 2, 0);
-        panel.factory_shop_grid_P2.add(panel.IS_1_HEAVY_TANK, 0, 1);
-        panel.factory_shop_grid_P2.add(panel.M3_HALFTRACK, 1, 1);
-        panel.factory_shop_grid_P2.add(panel.BA_64_ARMORED_CAR, 2, 1);
+        panel.factory_shop_grid_P2.add(panel.WEHRMACHT_RIFLE_SQUAD, 0, 0);
+        panel.factory_shop_grid_P2.add(panel.GRENADIER_SQUAD, 1, 0);
+        panel.factory_shop_grid_P2.add(panel.MG42_TEAM, 2, 0);
+        panel.factory_shop_grid_P2.add(panel.SDKFZ_251_HALFTRACK, 0, 1);
+        panel.factory_shop_grid_P2.add(panel.PANZER_IV_AUSF_J, 1, 1);
+        panel.factory_shop_grid_P2.add(panel.SDKFZ_234_2_PUMA, 2, 1);
         panel.factory_shop_grid_P2.setVisible(false);
         panel.factory_shop_grid_P2.setManaged(false);
     }
@@ -1564,21 +1497,20 @@ public class StartApp extends Application {
      * @param player The current player
      */
     private static void setButtonsAffodability(InfoPanelWidgets panel, Game game, String player){
-        if(player.equals("P1")){
-            setButtonFontAffordable(panel.WEHRMACHT_RIFLE_SQUAD, game.canAffor(player, UnitType.WEHRMACHT_RIFLE_SQUAD));
-            setButtonFontAffordable(panel.GRENADIER_SQUAD, game.canAffor(player, UnitType.GRENADIER_SQUAD));
-            setButtonFontAffordable(panel.MG42_TEAM, game.canAffor(player, UnitType.MG42_TEAM));
-            setButtonFontAffordable(panel.SDKFZ_251_HALFTRACK, game.canAffor(player, UnitType.SDKFZ_251_HALFTRACK));
-            setButtonFontAffordable(panel.PANZER_IV_AUSF_J, game.canAffor(player, UnitType.PANZER_IV_AUSF_J));
-            setButtonFontAffordable(panel.SDKFZ_234_2_PUMA, game.canAffor(player, UnitType.SDKFZ_234_2_PUMA));
-        }
-        else{
+        if (player.equals("P1")) {
             setButtonFontAffordable(panel.SOVIET_ASSAULT_SAPPER_SQUAD, game.canAffor(player, UnitType.SOVIET_ASSAULT_SAPPER_SQUAD));
             setButtonFontAffordable(panel.DP27_TEAM, game.canAffor(player, UnitType.DP27_TEAM));
             setButtonFontAffordable(panel.ZIS_3_FIELD_GUN, game.canAffor(player, UnitType.ZIS_3_FIELD_GUN));
             setButtonFontAffordable(panel.IS_1_HEAVY_TANK, game.canAffor(player, UnitType.IS_1_HEAVY_TANK));
             setButtonFontAffordable(panel.M3_HALFTRACK, game.canAffor(player, UnitType.M3_HALFTRACK));
             setButtonFontAffordable(panel.BA_64_ARMORED_CAR, game.canAffor(player, UnitType.BA_64_ARMORED_CAR));
+        } else {
+            setButtonFontAffordable(panel.WEHRMACHT_RIFLE_SQUAD, game.canAffor(player, UnitType.WEHRMACHT_RIFLE_SQUAD));
+            setButtonFontAffordable(panel.GRENADIER_SQUAD, game.canAffor(player, UnitType.GRENADIER_SQUAD));
+            setButtonFontAffordable(panel.MG42_TEAM, game.canAffor(player, UnitType.MG42_TEAM));
+            setButtonFontAffordable(panel.SDKFZ_251_HALFTRACK, game.canAffor(player, UnitType.SDKFZ_251_HALFTRACK));
+            setButtonFontAffordable(panel.PANZER_IV_AUSF_J, game.canAffor(player, UnitType.PANZER_IV_AUSF_J));
+            setButtonFontAffordable(panel.SDKFZ_234_2_PUMA, game.canAffor(player, UnitType.SDKFZ_234_2_PUMA));
         }
     }
 
@@ -1641,19 +1573,19 @@ public class StartApp extends Application {
     private static class ScenarioDefinition {
         String name; ///< Display name of the scenario
         Path map_path; ///< The map file path
-        Consumer<Game> setup_function; ///< Function that places starting units into the game
+        Path units_path; ///< The unit placement file path
 
         /**
          * @brief Constructor of the scenario definition
          * 
          * @param name_ Display name of the scenario
          * @param map_path_ Path to the map file
-         * @param setup_function_ Function that sets up the units
+         * @param units_path_ Path to the unit placement file
          */
-        ScenarioDefinition(String name_, Path map_path_, Consumer<Game> setup_function_) {
+        ScenarioDefinition(String name_, Path map_path_, Path units_path_) {
             this.name = name_;
             this.map_path = map_path_;
-            this.setup_function = setup_function_;
+            this.units_path = units_path_;
         }
 
         /**

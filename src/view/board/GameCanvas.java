@@ -9,10 +9,14 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
@@ -32,7 +36,7 @@ public final class GameCanvas extends Canvas {
     private Consumer<Position> tileClickHandler = position -> {}; ///< The handler for the mouse click
 
     private static final double INITIAL_ZOOM = 1.6;
-    private static final double ZOOM_STEP = 1.05;
+    private static final double ZOOM_STEP = 1.03;
     private static final double MIN_ZOOM = 0.85;
     private static final double MAX_ZOOM = 2.4;
 
@@ -54,6 +58,14 @@ public final class GameCanvas extends Canvas {
 
     private boolean[][] attack_map; ///< Which tiles are currently attackable by the selected unit
 
+    private Image static_map_cache = null; ///< Cached static terrain / overlay layer
+    private double static_map_cache_zoom = -1.0; ///< Zoom of the cached terrain layer
+    private double static_map_cache_width = -1.0; ///< Width of the cached terrain layer
+    private double static_map_cache_height = -1.0; ///< Height of the cached terrain layer
+
+    private final PauseTransition zoom_rebuild_timer = new PauseTransition(Duration.millis(140)); ///< Delay before rebuilding HQ cache after zoom stops
+    private boolean draw_scheduled = false; ///< Whether a redraw is already queued into JavaFX
+
     /**
      * @brief The constructor of the caanvas
      */
@@ -73,13 +85,51 @@ public final class GameCanvas extends Canvas {
         // Initialized the movement map so all are false
         movement_map = new boolean[game.getRows()][game.getColumns()];
 
+        // Configure delayed cache rebuild after zooming stops
+        zoom_rebuild_timer.setOnFinished(event -> {
+            rebuildStaticMapCache();
+            requestDraw();
+        });
+
         // Draw the current game
         updateCanvasSize();
-        draw();
+
+        Platform.runLater(() -> {
+            rebuildStaticMapCache();
+            draw();
+        });
     }
 
     public void setGame(Game game){
         this.game = game;
+        invalidateStaticMapCache();
+        rebuildStaticMapCache();
+        requestDraw();
+    }
+
+    /**
+     * @brief Mark the cache as outdated but keep the old image for temporary zoom preview
+     */
+    private void markStaticMapCacheStale() {
+        static_map_cache_zoom = -1.0;
+        static_map_cache_width = -1.0;
+        static_map_cache_height = -1.0;
+    }
+
+    /**
+     * @brief Schedule one redraw into the next JavaFX pulse
+     */
+    private void requestDraw() {
+        if (draw_scheduled) {
+            return;
+        }
+
+        draw_scheduled = true;
+
+        Platform.runLater(() -> {
+            draw_scheduled = false;
+            draw();
+        });
     }
 
     /**
@@ -270,73 +320,58 @@ public final class GameCanvas extends Canvas {
     }
 
     public void draw() {
-        // Define a 2d rectangular canvas
         GraphicsContext gc = getGraphicsContext2D();
 
         gc.clearRect(0, 0, getWidth(), getHeight());
         gc.setFill(Color.BLACK);
         gc.fillRect(0, 0, getWidth(), getHeight());
 
-        // And the font size
+        // During normal operation draw the cached terrain layer.
+        // If zoom changed and the cache is stale, temporarily stretch the old cache
+        // so zoom remains smooth, then rebuild it shortly after zooming stops.
+        if (isStaticMapCacheValid()) {
+            gc.drawImage(static_map_cache, 0, 0, getWidth(), getHeight());
+        } else if (static_map_cache != null) {
+            gc.drawImage(static_map_cache, 0, 0, getWidth(), getHeight());
+        } else {
+            drawStaticMap(gc);
+        }
+
         gc.setFont(Font.font(16));
 
+        // Draw only dynamic content on top
         for (int row = 0; row < game.getRows(); row++) {
             for (int column = 0; column < game.getColumns(); column++) {
-                // Set up the current position
                 Position pos = new Position(row, column);
-
-                Terrain terrain = game.getTerrain(pos);
                 Unit unit = game.getUnit(pos);
-                Overlay overlay = game.getOverlay(pos);
 
-                // Real position on canvas for the hex
                 double x = getHexX(row, column);
                 double y = getHexY(row);
 
-                // The point of the hexagon
                 double[] x_points = getPointsX(x);
                 double[] y_points = getPointsY(y);
 
-                // Draw either the loaded terrain asset or the fallback color for it
-                drawTerrainTile(gc, terrain, x, y, x_points, y_points);
-
-                // Draw the overlay icon if an overlay exists on the tile
-                if (overlay != Overlay.NONE) {
-                    drawOverlayIcon(gc, overlay, x, y);
-                }
-
-                // If this tile is clicked and doesn't contain an unit
                 if (tiles_selected[row][column]) {
-                    // Add a blue tint to it
                     gc.save();
                     gc.setFill(Color.color(0, 0, 1.0, 0.22));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
 
-                // If the clicked tile included unit and this tile is a possible movement option
                 if (movement_map[row][column]) {
-                    // Add a white tint to it
                     gc.save();
                     gc.setFill(Color.color(0, 0, 1.0, 0.42));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
 
-                // If the tile is an attackable enemy tile
                 if (attack_map[row][column]) {
-                    // Add a red tint to it
                     gc.save();
                     gc.setFill(Color.color(1.0, 0.0, 0.0, 0.42));
                     gc.fillPolygon(x_points, y_points, 6);
                     gc.restore();
                 }
 
-                // Set the hexagon border color
-                gc.setStroke(Color.BLACK);
-                gc.strokePolygon(x_points, y_points, 6);
-
-                // If the unit is currently being animated, do not draw it on its original tile
                 if (movement_animation_running
                         && animated_unit != null
                         && animation_origin != null
@@ -345,19 +380,121 @@ public final class GameCanvas extends Canvas {
                     unit = null;
                 }
 
-                // Add the unit marker
                 if (unit != null) {
                     drawUnit(gc, unit, pos);
                 }
             }
         }
 
-        // Draw the animated unit on its temporary animation tile
         if (movement_animation_running
                 && animated_unit != null
                 && animation_draw_position != null) {
             drawUnit(gc, animated_unit, animation_draw_position);
         }
+    }
+
+    /**
+     * Draw terrain, overlays and borders directly onto the main canvas.
+     */
+    private void drawStaticMap(GraphicsContext gc) {
+        for (int row = 0; row < game.getRows(); row++) {
+            for (int column = 0; column < game.getColumns(); column++) {
+                Position pos = new Position(row, column);
+
+                Terrain terrain = game.getTerrain(pos);
+                Overlay overlay = game.getOverlay(pos);
+
+                double x = getHexX(row, column);
+                double y = getHexY(row);
+
+                double[] x_points = getPointsX(x);
+                double[] y_points = getPointsY(y);
+
+                drawTerrainTile(gc, terrain, x, y, x_points, y_points);
+
+                if (overlay != Overlay.NONE) {
+                    drawOverlayIcon(gc, overlay, x, y);
+                }
+
+                gc.setStroke(Color.BLACK);
+                gc.strokePolygon(x_points, y_points, 6);
+            }
+        }
+    }
+
+    /**
+     * @brief Check whether the cached static terrain layer is still valid
+     * 
+     * @return True if the cache may be reused
+     */
+    private boolean isStaticMapCacheValid() {
+        return static_map_cache != null
+                && Double.compare(static_map_cache_zoom, zoom) == 0
+                && Math.abs(static_map_cache_width - getWidth()) < 0.1
+                && Math.abs(static_map_cache_height - getHeight()) < 0.1;
+    }
+
+    /**
+     * @brief Invalidate the cached static terrain layer
+     */
+    private void invalidateStaticMapCache() {
+        static_map_cache = null;
+        static_map_cache_zoom = -1.0;
+        static_map_cache_width = -1.0;
+        static_map_cache_height = -1.0;
+    }
+
+    /**
+     * @brief Rebuild the cached static terrain layer
+     * 
+     * This contains:
+     * - terrain art
+     * - overlay art
+     * - hex borders
+     * 
+     * Dynamic highlights and units are still drawn every frame separately.
+     */
+    private void rebuildStaticMapCache() {
+        Canvas layer = new Canvas(getWidth(), getHeight());
+        GraphicsContext gc = layer.getGraphicsContext2D();
+
+        gc.clearRect(0, 0, layer.getWidth(), layer.getHeight());
+        gc.setFill(Color.BLACK);
+        gc.fillRect(0, 0, layer.getWidth(), layer.getHeight());
+
+        for (int row = 0; row < game.getRows(); row++) {
+            for (int column = 0; column < game.getColumns(); column++) {
+                Position pos = new Position(row, column);
+
+                Terrain terrain = game.getTerrain(pos);
+                Overlay overlay = game.getOverlay(pos);
+
+                double x = getHexX(row, column);
+                double y = getHexY(row);
+
+                double[] x_points = getPointsX(x);
+                double[] y_points = getPointsY(y);
+
+                drawTerrainTile(gc, terrain, x, y, x_points, y_points);
+
+                if (overlay != Overlay.NONE) {
+                    drawOverlayIcon(gc, overlay, x, y);
+                }
+
+                gc.setStroke(Color.BLACK);
+                gc.strokePolygon(x_points, y_points, 6);
+            }
+        }
+
+        WritableImage snapshot = new WritableImage(
+                Math.max(1, (int) Math.ceil(getWidth())),
+                Math.max(1, (int) Math.ceil(getHeight()))
+        );
+
+        static_map_cache = layer.snapshot(new SnapshotParameters(), snapshot);
+        static_map_cache_zoom = zoom;
+        static_map_cache_width = getWidth();
+        static_map_cache_height = getHeight();
     }
 
     /**
@@ -543,26 +680,28 @@ public final class GameCanvas extends Canvas {
     private Image loadUnitImage(Unit unit) {
         String path = unit.getUnitType().getAssetPath();
 
-        // Return cached copy if present
-        Image cached = unit_image_cache.get(path);
-        if (cached != null) {
-            return cached;
+        // Return cached copy if present.
+        // containsKey() is used because a missing/broken asset is cached as null.
+        if (unit_image_cache.containsKey(path)) {
+            return unit_image_cache.get(path);
         }
 
         try {
             File file = new File(path);
             if (!file.exists()) {
                 System.err.println("Missing unit asset: " + path);
+                unit_image_cache.put(path, null);
                 return null;
             }
 
-            Image image = new Image(file.toURI().toString(), false);
+            Image image = new Image(file.toURI().toString());
 
             if (image.isError()) {
                 System.err.println("Failed to load unit asset: " + path);
                 if (image.getException() != null) {
                     image.getException().printStackTrace();
                 }
+                unit_image_cache.put(path, null);
                 return null;
             }
 
@@ -571,6 +710,7 @@ public final class GameCanvas extends Canvas {
         } catch (Exception exception) {
             System.err.println("Error while loading unit asset: " + path);
             exception.printStackTrace();
+            unit_image_cache.put(path, null);
             return null;
         }
     }
@@ -839,26 +979,46 @@ public final class GameCanvas extends Canvas {
         return (int)(tile_size_y*zoom);
     }
 
-    /**
-     * @brief Change the zoom when zooming in (called from outside teh canvas)
-     */
     public void zoomIn() {
-        zoom *= ZOOM_STEP;
-        zoom = Math.min(zoom, MAX_ZOOM);
+        zoomBy(ZOOM_STEP);
+    }
 
-        updateCanvasSize();
-        draw();
+    public void zoomOut() {
+        zoomBy(1.0 / ZOOM_STEP);
     }
 
     /**
-     * @brief Change the zoom when zooming out (called from outside teh canvas)
+     * Change zoom by a multiplicative factor.
+     *
+     * @param factor value above 1 zooms in, value below 1 zooms out
+     * @return true if zoom really changed
      */
-    public void zoomOut() {
-        zoom /= ZOOM_STEP;
-        zoom = Math.max(zoom, MIN_ZOOM);
+    public boolean zoomBy(double factor) {
+        if (factor <= 0.0 || Double.isNaN(factor) || Double.isInfinite(factor)) {
+            return false;
+        }
 
+        double old_zoom = zoom;
+        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * factor));
+
+        if (Math.abs(zoom - old_zoom) < 0.0001) {
+            return false;
+        }
+
+        // Resize immediately so ScrollPane logic still works correctly
         updateCanvasSize();
-        draw();
+
+        // Keep the previous cache image for a temporary stretched preview
+        // and rebuild the expensive terrain layer only after zooming settles.
+        markStaticMapCacheStale();
+
+        // Fast preview redraw
+        requestDraw();
+
+        // Delay the expensive rebuild until the user stops zooming
+        zoom_rebuild_timer.playFromStart();
+
+        return true;
     }
 
     /**

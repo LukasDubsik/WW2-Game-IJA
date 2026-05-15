@@ -1,5 +1,11 @@
 package bot;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import app.StartApp;
 import javafx.application.Platform;
 import model.game.Game;
@@ -8,8 +14,6 @@ import model.map.Serializable.Position;
 import model.map.Serializable.Terrain;
 import model.unit.Unit;
 import model.unit.UnitType;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * @class Bot
@@ -43,8 +47,8 @@ public class Bot {
                 }
 
                 Platform.runLater(() -> {
-                    StartApp.updateScreen(game);
                     game.nextTurn();
+                    StartApp.updateScreen(game);
                 });
             }
         });
@@ -86,8 +90,8 @@ public class Bot {
             if(unit.hasAlreadyPlayed())
                 continue;
 
-            List<Position> reachableTiles = game.getReachableTiles(position);
-
+            List<Position> reachableTiles = gameCopy.getReachableTiles(position);
+            
             Position move = getPriorityMove(gameCopy, player, unit, reachableTiles);
             if(move == null)
                 continue;
@@ -557,24 +561,7 @@ public class Bot {
      * @return A list of UnitType objects available to that player
      */
     private static List<UnitType> getAvailableUnits(String player){
-        List<UnitType> result = new ArrayList<>();
-        if(player.equals("P1")){
-            result.add(UnitType.WEHRMACHT_RIFLE_SQUAD);
-            result.add(UnitType.GRENADIER_SQUAD);
-            result.add(UnitType.MG42_TEAM);
-            result.add(UnitType.PANZER_IV_AUSF_J);
-            result.add(UnitType.SDKFZ_234_2_PUMA);
-            result.add(UnitType.SDKFZ_251_HALFTRACK);
-        }
-        else if(player.equals("P2")){
-            result.add(UnitType.SOVIET_ASSAULT_SAPPER_SQUAD);
-            result.add(UnitType.DP27_TEAM);
-            result.add(UnitType.ZIS_3_FIELD_GUN);
-            result.add(UnitType.IS_1_HEAVY_TANK);
-            result.add(UnitType.M3_HALFTRACK);
-            result.add(UnitType.BA_64_ARMORED_CAR);
-        }
-        return result;
+        return new ArrayList<>(UnitType.getUnitsForPlayer(player));
     }
 
     /**

@@ -451,6 +451,83 @@ public enum UnitType {
                 || getIndirectFireAttackAtDistance(TargetClass.HARD, distance) > 0;
     }
 
+        /**
+     * @brief Check whether this unit belongs to the Soviet faction
+     * 
+     * In the current project conventions:
+     * P1 = Soviets
+     * P2 = Germans
+     * 
+     * @return True if Soviet, false if German
+     */
+    public boolean isSovietUnit() {
+        return switch (this) {
+            case SOVIET_ASSAULT_SAPPER_SQUAD,
+                 DP27_TEAM,
+                 ZIS_3_FIELD_GUN,
+                 IS_1_HEAVY_TANK,
+                 M3_HALFTRACK,
+                 BA_64_ARMORED_CAR -> true;
+
+            case WEHRMACHT_RIFLE_SQUAD,
+                 GRENADIER_SQUAD,
+                 MG42_TEAM,
+                 SDKFZ_251_HALFTRACK,
+                 PANZER_IV_AUSF_J,
+                 SDKFZ_234_2_PUMA -> false;
+        };
+    }
+
+    /**
+     * @brief Check whether this unit type is legal for the given player
+     * 
+     * @param player The player identifier
+     * @return True if the player may use this unit type
+     */
+    public boolean belongsToPlayer(String player) {
+        if ("P1".equals(player)) {
+            return isSovietUnit();
+        }
+
+        if ("P2".equals(player)) {
+            return !isSovietUnit();
+        }
+
+        throw new IllegalArgumentException("Unknown player: " + player);
+    }
+
+    /**
+     * @brief Get all unit types legal for the given player
+     * 
+     * @param player The player identifier
+     * @return List of unit types of that faction
+     */
+    public static List<UnitType> getUnitsForPlayer(String player) {
+        if ("P1".equals(player)) {
+            return List.of(
+                    SOVIET_ASSAULT_SAPPER_SQUAD,
+                    DP27_TEAM,
+                    ZIS_3_FIELD_GUN,
+                    IS_1_HEAVY_TANK,
+                    M3_HALFTRACK,
+                    BA_64_ARMORED_CAR
+            );
+        }
+
+        if ("P2".equals(player)) {
+            return List.of(
+                    WEHRMACHT_RIFLE_SQUAD,
+                    GRENADIER_SQUAD,
+                    MG42_TEAM,
+                    SDKFZ_251_HALFTRACK,
+                    PANZER_IV_AUSF_J,
+                    SDKFZ_234_2_PUMA
+            );
+        }
+
+        throw new IllegalArgumentException("Unknown player: " + player);
+    }
+
     /**
      * @brief Given enum in the String form, create from it the enum
      * 
