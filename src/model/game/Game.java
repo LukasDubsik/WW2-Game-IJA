@@ -1,10 +1,19 @@
 package model.game;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 
-import bot.Bot;
 import app.StartApp;
-import model.map.*;
+import bot.Bot;
+import model.map.Building;
 import model.map.Serializable.GameMap;
 import model.map.Serializable.Overlay;
 import model.map.Serializable.Position;
@@ -12,8 +21,14 @@ import model.map.Serializable.Terrain;
 import model.unit.TargetClass;
 import model.unit.Unit;
 import model.unit.UnitType;
-import replay.*;
-import replay.records.*;
+import replay.Action;
+import replay.Replay;
+import replay.TurnRecord;
+import replay.records.BuildingIntegrityRecord;
+import replay.records.DamageRecord;
+import replay.records.MoveRecord;
+import replay.records.RepairRecord;
+import replay.records.UnitPurchaseRecord;
 
 /**
  * @class Game
@@ -442,6 +457,23 @@ public class Game {
      */
     public String getCurrentPlayer() {
         return this.current_player;
+    }
+
+    /**
+     * @brief Set which player starts as currently active
+     * 
+     * This is mainly used by the startup menu so the user can choose
+     * which faction they want to begin with.
+     * 
+     * @param player The player identifier ("P1" or "P2")
+     */
+    public void setCurrentPlayer(String player) {
+        // Only two players are supported
+        if (!"P1".equals(player) && !"P2".equals(player)) {
+            throw new IllegalArgumentException("Unsupported player: " + player);
+        }
+
+        this.current_player = player;
     }
 
     /**

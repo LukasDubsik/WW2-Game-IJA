@@ -3,20 +3,32 @@ package app;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.game.Game;
 import model.game.GameFactory;
@@ -27,7 +39,6 @@ import model.map.Serializable.Terrain;
 import model.unit.ArmamentType;
 import model.unit.Unit;
 import model.unit.UnitType;
-import replay.Replay;
 import view.board.GameCanvas;
 
 public class StartApp extends Application {
@@ -38,6 +49,7 @@ public class StartApp extends Application {
     private static Label replayLabel; ///< Global replay label
     private static Label economyLabel; ///< Global economy label
     private static InfoPanelWidgets info_panel; ///< Global info panel
+    private static String chosen_player = "P1"; ///< Faction chosen in the startup menu
 
     /**
      * @brief Small helper structure for one field row in the side panel
@@ -111,41 +123,275 @@ public class StartApp extends Application {
         InfoRow description_row; ///< Description row
     }
 
-    /**
-     * @brief the Main method to start the application as a whole
+        /**
+     * @brief Entry point of the application
      */
     @Override
     public void start(Stage stage) {
-        // Select the scenario to be loaded on application start
-        // To switch scenario later, just change these two paths
-        Path map_path = Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.map");
-        Path units_path = Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.units");
+        stage.setTitle("IJA game");
+        stage.setScene(createStartupScene(stage));
+        stage.show();
+    }
 
-        // Load the scenario -> map + starting units
-        game = GameFactory.createGame(map_path, units_path);
+        /**
+     * @brief Create the basic startup menu scene
+     * 
+     * @param stage The main application stage
+     * @return The created startup menu scene
+     */
+    private Scene createStartupScene(Stage stage) {
+        // Holder of all available scenarios
+        List<ScenarioDefinition> scenarios = getScenarioDefinitions();
 
-        // Label holding the current wealth of each player
-        economyLabel = new Label();
-        economyLabel.setStyle("-fx-text-fill: #FFD700; -fx-font-size: 16px; -fx-font-weight: bold;");
-        updateEconomyLabel(economyLabel, game);
+        // Title
+        Label title = new Label("East Prussia 1945");
+        title.setStyle(
+                "-fx-text-fill: white;"
+                        + "-fx-font-size: 28px;"
+                        + "-fx-font-weight: bold;"
+        );
 
+        Label subtitle = new Label("Choose the scenario and the faction you want to play.");
+        subtitle.setStyle("-fx-text-fill: #c8d0db; -fx-font-size: 13px;");
+
+        // Scenario selection
+        Label scenario_label = new Label("Scenario");
+        scenario_label.setStyle("-fx-text-fill: #8f9db2; -fx-font-size: 12px; -fx-font-weight: bold;");
+
+        ComboBox<ScenarioDefinition> scenario_box = new ComboBox<>();
+        scenario_box.getItems().addAll(scenarios);
+        scenario_box.getSelectionModel().selectFirst();
+        scenario_box.setPrefWidth(420);
+
+        // Faction selection
+        Label faction_label = new Label("Faction");
+        faction_label.setStyle("-fx-text-fill: #8f9db2; -fx-font-size: 12px; -fx-font-weight: bold;");
+
+        ToggleGroup faction_group = new ToggleGroup();
+
+        RadioButton soviets_button = new RadioButton("P1 – Soviets");
+        soviets_button.setToggleGroup(faction_group);
+        soviets_button.setSelected(true);
+        soviets_button.setStyle("-fx-text-fill: white;");
+
+        RadioButton germans_button = new RadioButton("P2 – Germans");
+        germans_button.setToggleGroup(faction_group);
+        germans_button.setStyle("-fx-text-fill: white;");
+
+        // Start button
+        Button start_button = new Button("Start scenario");
+        start_button.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 10 18 10 18;"
+        );
+
+        start_button.setOnAction(event -> {
+            ScenarioDefinition chosen_scenario = scenario_box.getValue();
+
+            String chosen_player = "P1";
+            if (faction_group.getSelectedToggle() == germans_button) {
+                chosen_player = "P2";
+            }
+
+            // Open the selected scenario
+            openScenario(stage, chosen_scenario, chosen_player);
+        });
+
+        VBox menu_box = new VBox(
+                12,
+                title,
+                subtitle,
+                scenario_label,
+                scenario_box,
+                faction_label,
+                soviets_button,
+                germans_button,
+                start_button
+        );
+
+        menu_box.setAlignment(Pos.CENTER_LEFT);
+        menu_box.setPadding(new Insets(24));
+        menu_box.setMaxWidth(460);
+        menu_box.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #14181f, #1c2330);"
+                        + "-fx-border-color: #2c3442;"
+                        + "-fx-border-width: 1;"
+                        + "-fx-background-radius: 10;"
+                        + "-fx-border-radius: 10;"
+        );
+
+        StackPane root = new StackPane(menu_box);
+        root.setStyle("-fx-background-color: #0c0f14;");
+
+        return new Scene(root, 1100, 700);
+    }
+
+    /**
+     * @brief Open one selected scenario from the startup menu
+     * 
+     * @param stage The application stage
+     * @param scenario The chosen scenario
+     * @param chosen_player Which faction the user wants to play
+     */
+    private void openScenario(Stage stage, ScenarioDefinition scenario, String chosen_player) {
+        // Check that the scenario exists
+        if (scenario == null) {
+            throw new IllegalArgumentException("Scenario cannot be null.");
+        }
+
+        // Create the base game from the selected map
+        Game loaded_game = GameFactory.createGame(scenario.map_path);
+
+        // Place the scenario units
+        scenario.setup_function.accept(loaded_game);
+
+        // Let the chosen faction start
+        loaded_game.setCurrentPlayer(chosen_player);
+
+        // Store globally for the rest of the application
+        StartApp.game = loaded_game;
+        StartApp.chosen_player = chosen_player;
+
+        // Build the real game scene
+        Scene scene = createGameScene(stage, loaded_game, chosen_player, scenario.name);
+
+        stage.setTitle("IJA game - " + scenario.name);
+        stage.setScene(scene);
+    }
+
+    /**
+     * @brief Get the list of all scenarios available in the startup menu
+     * 
+     * @return The list of scenarios
+     */
+    private List<ScenarioDefinition> getScenarioDefinitions() {
+        return List.of(
+                new ScenarioDefinition(
+                        "Balga / Heiligenbeil corridor",
+                        Path.of("lib/maps/balga_heiligenbeil_corridor_1945_large.map"),
+                        StartApp::setupBalgaScenarioUnits
+                ),
+                new ScenarioDefinition(
+                        "Allenstein lakes approaches",
+                        Path.of("lib/maps/allenstein_lakes_approaches_1945_large.map"),
+                        StartApp::setupAllensteinScenarioUnits
+                )
+        );
+    }
+
+    /**
+     * @brief Place the starting units for the Balga / Heiligenbeil scenario
+     * 
+     * @param game The game to populate
+     */
+    private static void setupBalgaScenarioUnits(Game game) {
+        // P1 - Soviet attacking force pressing from the west
+        game.createUnit("BA-64 Armored Car", "P1", 8, 0);
+        game.createUnit("M3 Half-track", "P1", 9, 2);
+        game.createUnit("IS-1 Heavy Tank", "P1", 10, 2);
+        game.createUnit("IS-1 Heavy Tank", "P1", 11, 0);
+        game.createUnit("ZiS-3 Field Gun", "P1", 12, 1);
+        game.createUnit("DP-27 Team", "P1", 5, 1);
+        game.createUnit("Soviet Assault Sapper Squad", "P1", 6, 3);
+        game.createUnit("Soviet Assault Sapper Squad", "P1", 3, 3);
+        game.createUnit("DP-27 Team", "P1", 9, 0);
+
+        // P2 - German pocket defence toward the coast
+        game.createUnit("Panzer IV Ausf. J", "P2", 8, 24);
+        game.createUnit("Panzer IV Ausf. J", "P2", 12, 24);
+        game.createUnit("Sd.Kfz. 251/1 Half-track", "P2", 7, 25);
+        game.createUnit("Sd.Kfz. 234/2 Puma", "P2", 5, 23);
+        game.createUnit("MG 42 Team", "P2", 2, 20);
+        game.createUnit("Grenadier Squad", "P2", 3, 20);
+        game.createUnit("Wehrmacht Rifle Squad", "P2", 4, 24);
+        game.createUnit("Grenadier Squad", "P2", 9, 19);
+        game.createUnit("MG 42 Team", "P2", 13, 24);
+        game.createUnit("Wehrmacht Rifle Squad", "P2", 11, 23);
+    }
+
+    /**
+     * @brief Place the starting units for the Allenstein scenario
+     * 
+     * @param game The game to populate
+     */
+    private static void setupAllensteinScenarioUnits(Game game) {
+        // P1 - Soviet attacking force from the west / south-west
+        game.createUnit("BA-64 Armored Car", "P1", 8, 0);
+        game.createUnit("M3 Half-track", "P1", 9, 1);
+        game.createUnit("IS-1 Heavy Tank", "P1", 10, 2);
+        game.createUnit("IS-1 Heavy Tank", "P1", 11, 0);
+        game.createUnit("ZiS-3 Field Gun", "P1", 12, 2);
+        game.createUnit("DP-27 Team", "P1", 7, 1);
+        game.createUnit("Soviet Assault Sapper Squad", "P1", 6, 2);
+        game.createUnit("DP-27 Team", "P1", 10, 0);
+        game.createUnit("Soviet Assault Sapper Squad", "P1", 12, 1);
+
+        // P2 - German delaying defence around important nodes
+        game.createUnit("Wehrmacht Rifle Squad", "P2", 3, 1);
+        game.createUnit("MG 42 Team", "P2", 4, 0);
+        game.createUnit("Grenadier Squad", "P2", 3, 2);
+        game.createUnit("Panzer IV Ausf. J", "P2", 6, 4);
+        game.createUnit("Sd.Kfz. 234/2 Puma", "P2", 7, 5);
+        game.createUnit("Sd.Kfz. 251/1 Half-track", "P2", 10, 4);
+        game.createUnit("MG 42 Team", "P2", 10, 18);
+        game.createUnit("Grenadier Squad", "P2", 7, 22);
+        game.createUnit("Panzer IV Ausf. J", "P2", 13, 25);
+        game.createUnit("Wehrmacht Rifle Squad", "P2", 13, 26);
+    }
+
+    /**
+     * @brief Create the real game scene after the startup menu selection
+     * 
+     * @param stage The application stage
+     * @param game The prepared game
+     * @param chosen_player Which faction the user chose
+     * @param scenario_name The scenario display name
+     * @return The created scene
+     */
+    private Scene createGameScene(Stage stage, Game game, String chosen_player, String scenario_name) {
         // Create the prettier side information panel
-        info_panel = createInfoPanel();
-        setFactoryButtonsEvents(info_panel, game, economyLabel);
+        StartApp.info_panel = createInfoPanel();
+        InfoPanelWidgets info_panel = StartApp.info_panel;
         clearInfoPanel(info_panel);
 
         // Label holding the currently active turn/player
-        turnLabel = new Label();
+        StartApp.turnLabel = new Label();
+        Label turnLabel = StartApp.turnLabel;
         turnLabel.setStyle("-fx-text-fill: #d0d0d0; -fx-font-size: 14px;");
-        updateTurnLabel(turnLabel, game);
+        updateTurnLabel(turnLabel, game, chosen_player);
 
-        // Label if the game is in replay mode
-        replayLabel = new Label();
-        replayLabel.setStyle("-fx-text-fill: red; -fx-font-size: 14px;");
-        updateReplayLabel(replayLabel, game);
+        // Replay label
+        StartApp.replayLabel = new Label();
+        Label replayLabel = StartApp.replayLabel;
+        replayLabel.setStyle("-fx-text-fill: #f0c674; -fx-font-size: 13px;");
+
+        // Economy label
+        StartApp.economyLabel = new Label();
+        Label economyLabel = StartApp.economyLabel;
+        economyLabel.setStyle("-fx-text-fill: #c8d0db; -fx-font-size: 13px;");
 
         // Create the game canvas
-        canvas = new GameCanvas(game, 80, 70);
+        StartApp.canvas = new GameCanvas(game, 80, 70);
+        GameCanvas canvas = StartApp.canvas;
+
+        // Keep the globally active game as well
+        StartApp.game = game;
+
+        // Initialize the extra labels immediately
+        updateReplayLabel(replayLabel, game);
+        updateEconomyLabel(economyLabel, game);
+
+        // Reconnect the shop buttons to the current game instance
+        setFactoryButtonsEvents(info_panel, game, economyLabel);
+
+        // Store the current active UI objects globally as well
+        StartApp.info_panel = info_panel;
+        StartApp.turnLabel = turnLabel;
+        StartApp.canvas = canvas;
+        StartApp.game = game;
 
         // What happens when tile is clicked by a mouse
         canvas.setOnTileClicked(position -> {
@@ -157,8 +403,6 @@ public class StartApp extends Application {
         root.setLeft(info_panel.root);
 
         // Create a group for the canvas
-        // The group is important here because the ScrollPane operates on layoutBounds
-        // and scaled content behaves more predictably this way
         Group canvas_group = new Group(canvas);
         canvas_group.setCache(false);
 
@@ -172,8 +416,6 @@ public class StartApp extends Application {
         ScrollPane scroller = new ScrollPane(centered_pane);
         scroller.setPannable(false);
         scroller.setStyle("-fx-background: black; -fx-background-color: black;");
-        scroller.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroller.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         // Ensure that the center pane resizes with the visible viewport
         scroller.viewportBoundsProperty().addListener((obs, old_bounds, new_bounds) -> {
@@ -220,7 +462,7 @@ public class StartApp extends Application {
             double dx = event.getSceneX() - mouse[0];
             double dy = event.getSceneY() - mouse[1];
 
-            // Ignore tiny hand jitter so a click is not lost
+            // Ignore extremely small hand jitter so a click is not lost
             if (!dragging[0] && Math.hypot(dx, dy) < drag_threshold) {
                 return;
             }
@@ -257,14 +499,13 @@ public class StartApp extends Application {
             if (!dragging[0]) {
                 javafx.geometry.Point2D localPoint = canvas.sceneToLocal(event.getSceneX(), event.getSceneY());
                 canvas.handleClick(localPoint.getX(), localPoint.getY());
-                updateReplayLabel(replayLabel, game);
             }
 
             dragging[0] = false;
             event.consume();
         });
 
-        // Center the scroller in the center of the all
+        // Center the scroller on the center of the all
         root.setCenter(scroller);
 
         // Create a lower control bar for turn handling
@@ -273,119 +514,20 @@ public class StartApp extends Application {
         bottomPanel.setAlignment(Pos.CENTER_LEFT);
         bottomPanel.setStyle("-fx-background-color: #111111;");
 
-        // Spacers so the button goes to the right corner
-        Region leftSpacer = new Region();
-        HBox.setHgrow(leftSpacer, Priority.ALWAYS);
-        Region rightSpacer = new Region();
-        HBox.setHgrow(rightSpacer, Priority.ALWAYS);
-
-        // Checkbox for player 1 to be a bot
-        CheckBox botP1CheckBox = new CheckBox("P1 bot");
-        botP1CheckBox.setStyle(
-                "-fx-text-fill: #f3f6fb;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-font-size: 11px;" +
-                        "-fx-padding: 4 0 4 0;" +
-                        "-fx-mark-color: #4ac26b;" +
-                        "-fx-focus-color: transparent;" +
-                        "-fx-faint-focus-color: transparent;"
-        );
-        botP1CheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
-            game.setPlayerBot("P1", newValue);
-        });
-
-        // Checkbox for player 2 to be a bot
-        CheckBox botP2CheckBox = new CheckBox("P2 bot");
-        botP2CheckBox.setStyle(
-                "-fx-text-fill: #f3f6fb;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-font-size: 11px;" +
-                        "-fx-padding: 4 0 4 0;" +
-                        "-fx-mark-color: #4ac26b;" +
-                        "-fx-focus-color: transparent;" +
-                        "-fx-faint-focus-color: transparent;"
-        );
-        botP2CheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
-            game.setPlayerBot("P2", newValue);
-        });
-
-        // Button to open a new replay
-        Button openReplayButton = new Button("Open replay");
-        setDefaultButtonFont(openReplayButton);
-        openReplayButton.setOnAction(event -> {
-            CompletableFuture.runAsync(new Runnable() {
-                @Override
-                public void run() {
-                    FileUtil.chooseFile("Open replay");
-
-                    File file = FileUtil.file;
-                    if(file == null)
-                        return;
-
-                    Replay replay = FileUtil.readFiletoReplay(file);
-                    if(replay == null)
-                        return;
-                    String[] players = {"P1", "P2"};
-
-                    game = new Game(players, replay);
-                    canvas.setGame(game);
-
-                    Platform.runLater(() -> {
-                        canvas.draw();
-                        updateReplayLabel(replayLabel, game);
-                        updateTurnLabel(turnLabel, game);
-                        updateEconomyLabel(economyLabel, game);
-                    });
-                }
-            });
-        });
-
-        // Button to save the replay of the current game
-        Button saveReplayButton = new Button("Save replay");
-        setDefaultButtonFont(saveReplayButton);
-        saveReplayButton.setOnAction(event -> {
-            CompletableFuture.runAsync(new Runnable() {
-                @Override
-                public void run() {
-
-                    FileUtil.createReplayFile("Save replay");
-                    File file = FileUtil.file;
-                    if(file == null)
-                        return;
-
-                    FileUtil.saveReplayToFile(game.getReplay(), file);
-                }
-            });
-        });
-
-        // Button to revert the previouse turn
-        Button prevTurnButton = new Button("Prev turn");
-        setDefaultButtonFont(prevTurnButton);
-        prevTurnButton.setOnAction(event -> {
-            game.prevTurn();
-
-            // Remove all previous visual movement selections
-            canvas.clearSelections();
-
-            // Update the lower label
-            updateTurnLabel(turnLabel, game);
-
-            // Update replay label
-            updateReplayLabel(replayLabel, game);
-
-            // Update the economy label
-            updateEconomyLabel(economyLabel, game);
-
-            // Clear stale info from previous turn selection
-            clearInfoPanel(info_panel);
-
-            // Update victory screen
-            updateVictoryScreen(info_panel);
-        });
+        // Spacer so buttons go to the right corner
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
         // Button for shifting to the next turn
         Button nextTurnButton = new Button("Next turn");
-        setDefaultButtonFont(nextTurnButton);
+        nextTurnButton.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #4d8df0, #2d63ba);"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+
         nextTurnButton.setOnAction(event -> {
             // Move the game to the next turn
             game.nextTurn();
@@ -393,33 +535,40 @@ public class StartApp extends Application {
             // Remove all previous visual movement selections
             canvas.clearSelections();
 
-            // Update the lower label
-            updateTurnLabel(turnLabel, game);
-
-            // Update replay label
+            // Update the lower labels
+            updateTurnLabel(turnLabel, game, chosen_player);
             updateReplayLabel(replayLabel, game);
-
-            // Update the economy label
             updateEconomyLabel(economyLabel, game);
 
             // Clear stale info from previous turn selection
             clearInfoPanel(info_panel);
 
-            // Update victory screen
+            // Update victory screen if needed
             updateVictoryScreen(info_panel);
         });
 
+        // Small button for returning to the startup menu
+        Button menuButton = new Button("Menu");
+        menuButton.setStyle(
+                "-fx-background-color: #2b313d;"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+
+        menuButton.setOnAction(event -> {
+            stage.setTitle("IJA game");
+            stage.setScene(createStartupScene(stage));
+        });
+
         // Put the controls together
-        bottomPanel.getChildren().addAll(turnLabel, replayLabel, leftSpacer, economyLabel, rightSpacer, botP1CheckBox, botP2CheckBox, openReplayButton, saveReplayButton, prevTurnButton, nextTurnButton);
+        bottomPanel.getChildren().addAll(turnLabel, replayLabel, economyLabel, spacer, menuButton, nextTurnButton);
 
         // Place the panel at the bottom
         root.setBottom(bottomPanel);
 
-        Scene scene = new Scene(root, 1500, 900);
-
-        stage.setTitle("IJA game");
-        stage.setScene(scene);
-        stage.show();
+        return new Scene(root, 1500, 900);
     }
 
     /**
@@ -1082,9 +1231,26 @@ public class StartApp extends Application {
      * 
      * @param turnLabel The label to be updated
      * @param game The game from which to read the active turn
+     * @param chosen_player Which faction the human chose in the startup menu
+     */
+    private static void updateTurnLabel(Label turnLabel, Game game, String chosen_player) {
+        String chosen_player_name = "P1".equals(chosen_player) ? "Soviets (P1)" : "Germans (P2)";
+
+        turnLabel.setText(
+                "Scenario player: " + chosen_player_name
+                        + " | Turn: " + game.getCurrentTurn()
+                        + " | Current player: " + game.getCurrentPlayer()
+        );
+    }
+
+    /**
+     * @brief Compatibility wrapper for older code paths still calling the old form
+     * 
+     * @param turnLabel The label to be updated
+     * @param game The game from which to read the active turn
      */
     private static void updateTurnLabel(Label turnLabel, Game game) {
-        turnLabel.setText("Turn: " + game.getCurrentTurn() + " | Current player: " + game.getCurrentPlayer());
+        updateTurnLabel(turnLabel, game, StartApp.chosen_player);
     }
 
     /**
@@ -1447,11 +1613,55 @@ public class StartApp extends Application {
      * @param game The current game
      */
     public static void updateScreen(Game game){
-        canvas.clearSelections();
-        updateTurnLabel(turnLabel, game);
-        updateReplayLabel(replayLabel, game);
-        updateEconomyLabel(economyLabel, game);
-        clearInfoPanel(info_panel);
-        updateVictoryScreen(info_panel);
+        if (canvas != null) {
+            canvas.clearSelections();
+        }
+
+        if (turnLabel != null) {
+            updateTurnLabel(turnLabel, game);
+        }
+
+        if (replayLabel != null) {
+            updateReplayLabel(replayLabel, game);
+        }
+
+        if (economyLabel != null) {
+            updateEconomyLabel(economyLabel, game);
+        }
+
+        if (info_panel != null) {
+            clearInfoPanel(info_panel);
+            updateVictoryScreen(info_panel);
+        }
+    }
+
+    /**
+     * @brief Small helper structure describing one startable scenario
+     */
+    private static class ScenarioDefinition {
+        String name; ///< Display name of the scenario
+        Path map_path; ///< The map file path
+        Consumer<Game> setup_function; ///< Function that places starting units into the game
+
+        /**
+         * @brief Constructor of the scenario definition
+         * 
+         * @param name_ Display name of the scenario
+         * @param map_path_ Path to the map file
+         * @param setup_function_ Function that sets up the units
+         */
+        ScenarioDefinition(String name_, Path map_path_, Consumer<Game> setup_function_) {
+            this.name = name_;
+            this.map_path = map_path_;
+            this.setup_function = setup_function_;
+        }
+
+        /**
+         * @brief Show the scenario nicely inside ComboBox
+         */
+        @Override
+        public String toString() {
+            return this.name;
+        }
     }
 }
