@@ -1646,4 +1646,28 @@ public class Game {
 
         return p1HQCount > 1 || p2HQCount > 1;
     }
+
+    /**
+     * @brief Get the winner or return null if game is not finished
+     *
+     * @return Winner player
+     */
+    public String getWinner(){
+        int p1HQCount = 0;
+        int p2HQCount = 0;
+        for(Building building : buildings.values()){
+            if(!building.isHQ())
+                continue;
+            if(building.getOwner().equals("P1"))
+                p1HQCount++;
+            if(building.getOwner().equals("P2"))
+                p2HQCount++;
+        }
+
+        if(p1HQCount > 1)
+            return "P1";
+        else if(p2HQCount > 1)
+            return "P2";
+        return null;
+    }
 }

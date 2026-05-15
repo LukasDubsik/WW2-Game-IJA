@@ -13,6 +13,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -52,6 +54,11 @@ public class StartApp extends Application {
     private static class InfoPanelWidgets {
         ScrollPane root; ///< Scrollable outer wrapper
         VBox content; ///< Inner content
+
+        Image player1Victory; ///< Victory image for player 1
+        Image player2Victory; ///< Victory image for player 2
+        ImageView imageViewP1; ///< Image view for player 1 victory screen
+        ImageView imageViewP2; ///< Image view for player 2 victory screen
 
         Label title_label; ///< Main title
         Label subtitle_label; ///< Subtitle / secondary text
@@ -371,6 +378,9 @@ public class StartApp extends Application {
 
             // Clear stale info from previous turn selection
             clearInfoPanel(info_panel);
+
+            // Update victory screen
+            updateVictoryScreen(info_panel);
         });
 
         // Button for shifting to the next turn
@@ -394,6 +404,9 @@ public class StartApp extends Application {
 
             // Clear stale info from previous turn selection
             clearInfoPanel(info_panel);
+
+            // Update victory screen
+            updateVictoryScreen(info_panel);
         });
 
         // Put the controls together
@@ -442,6 +455,18 @@ public class StartApp extends Application {
      */
     private static InfoPanelWidgets createInfoPanel() {
         InfoPanelWidgets panel = new InfoPanelWidgets();
+
+        // Getting the victory images
+        File p1VictoryFile = new File("lib/assets/victoryScreens/p1VictoryScreen.png");
+        File p2VictoryFile = new File("lib/assets/victoryScreens/p2VictoryScreen.png");
+        panel.player1Victory = new Image(p1VictoryFile.toURI().toString());
+        panel.player2Victory = new Image(p2VictoryFile.toURI().toString());
+        panel.imageViewP1 = new ImageView(panel.player1Victory);
+        panel.imageViewP2 = new ImageView(panel.player2Victory);
+        panel.imageViewP1.setVisible(false);
+        panel.imageViewP2.setVisible(false);
+        panel.imageViewP1.setManaged(false);
+        panel.imageViewP2.setManaged(false);
 
         // Main title and subtitle
         panel.title_label = new Label();
@@ -501,9 +526,10 @@ public class StartApp extends Application {
 
         // Create buttons for factory shop
         createFactoryButtons(panel);
-
         panel.content = new VBox(
                 10,
+                panel.imageViewP1,
+                panel.imageViewP2,
                 panel.title_label,
                 panel.subtitle_label,
                 panel.tile_section,
@@ -1391,6 +1417,31 @@ public class StartApp extends Application {
     }
 
     /**
+     * @brief Update the victory screen
+     *
+     * @param panel Side panel of all widgets
+     */
+    private static void updateVictoryScreen(InfoPanelWidgets panel){
+        String winner = game.getWinner();
+        if (winner != null){
+            if(winner.equals("P1")) {
+                panel.imageViewP1.setVisible(true);
+                panel.imageViewP1.setManaged(true);
+            }
+            else {
+                panel.imageViewP2.setVisible(true);
+                panel.imageViewP2.setManaged(true);
+            }
+        }
+        else{
+            panel.imageViewP1.setVisible(false);
+            panel.imageViewP1.setManaged(false);
+            panel.imageViewP2.setVisible(false);
+            panel.imageViewP2.setManaged(false);
+        }
+    }
+
+    /**
      * @brief Update the current canvas screen
      *
      * @param game The current game
@@ -1401,5 +1452,6 @@ public class StartApp extends Application {
         updateReplayLabel(replayLabel, game);
         updateEconomyLabel(economyLabel, game);
         clearInfoPanel(info_panel);
+        updateVictoryScreen(info_panel);
     }
 }
