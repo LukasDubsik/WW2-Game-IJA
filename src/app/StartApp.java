@@ -118,6 +118,10 @@ public class StartApp extends Application {
         InfoRow price_row; ///< Price row
         InfoRow armaments_row; ///< Armament list row
 
+        Label action_section; ///< Action helper section title
+        InfoRow action_row; ///< Current possible actions
+        InfoRow attack_preview_row; ///< Attack preview row
+
         Label description_section; ///< Description section title
         InfoRow description_row; ///< Description row
     }
@@ -454,6 +458,43 @@ public class StartApp extends Application {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // Button for stepping one replay turn backwards
+        Button prevTurnButton = new Button("Prev turn");
+        prevTurnButton.setStyle(
+                "-fx-background-color: #2b313d;"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+
+        prevTurnButton.setOnAction(event -> {
+            game.prevTurn();
+            canvas.clearSelections();
+            canvas.draw();
+            updateTurnLabel(turnLabel, game, chosen_player);
+            updateReplayLabel(replayLabel, game);
+            updateEconomyLabel(economyLabel, game);
+            clearInfoPanel(info_panel);
+            updateVictoryScreen(info_panel);
+        });
+
+        // Button for saving the replay
+        Button saveReplayButton = new Button("Save replay");
+        saveReplayButton.setStyle(
+                "-fx-background-color: #2b313d;"
+                        + "-fx-text-fill: white;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-background-radius: 8;"
+                        + "-fx-padding: 8 16 8 16;"
+        );
+
+        saveReplayButton.setOnAction(event -> {
+            FileUtil.createReplayFile("Save replay");
+            FileUtil.saveReplayToFile(game.getReplay(), FileUtil.file);
+            updateReplayLabel(replayLabel, game);
+        });
+
         // Button for shifting to the next turn
         Button nextTurnButton = new Button("Next turn");
         nextTurnButton.setStyle(
@@ -499,7 +540,7 @@ public class StartApp extends Application {
         });
 
         // Put the controls together
-        bottomPanel.getChildren().addAll(turnLabel, replayLabel, economyLabel, spacer, menuButton, nextTurnButton);
+        bottomPanel.getChildren().addAll(turnLabel, replayLabel, economyLabel, spacer, saveReplayButton, prevTurnButton, menuButton, nextTurnButton);
 
         // Place the panel at the bottom
         root.setBottom(bottomPanel);
@@ -566,6 +607,7 @@ public class StartApp extends Application {
         panel.tile_section = makeSectionLabel("Tile");
         panel.unit_section = makeSectionLabel("Unit");
         panel.building_section = makeSectionLabel("Building");
+        panel.action_section = makeSectionLabel("Actions");
         panel.description_section = makeSectionLabel("Description");
 
         // Tile rows
@@ -587,6 +629,10 @@ public class StartApp extends Application {
         panel.armaments_row = createInfoRow("Armaments");
         panel.armaments_row.value.setWrapText(true);
 
+        // Action rows
+        panel.action_row = createInfoRow("Available actions");
+        panel.attack_preview_row = createInfoRow("Attack preview");
+
         // HP block
         panel.hp_label = new Label("Hit points");
         panel.hp_label.setStyle(
@@ -605,7 +651,7 @@ public class StartApp extends Application {
         panel.hp_box = new VBox(2, panel.hp_label, panel.hp_value, panel.hp_bar);
 
         // Description row
-        panel.description_row = createInfoRow("Summary");
+        panel.description_row = createInfoRow("Historical note");
         panel.description_row.value.setStyle("-fx-text-fill: #d5d9e0; -fx-font-size: 12px;");
         panel.description_row.value.setWrapText(true);
 
@@ -636,6 +682,9 @@ public class StartApp extends Application {
                 panel.movement_row.box,
                 panel.price_row.box,
                 panel.armaments_row.box,
+                panel.action_section,
+                panel.action_row.box,
+                panel.attack_preview_row.box,
                 panel.description_section,
                 panel.description_row.box
         );
@@ -729,6 +778,7 @@ public class StartApp extends Application {
         setSectionVisible(panel.unit_section, false);
         setSectionVisible(panel.building_section, false);
         setSectionVisible(panel.buy_section, false);
+        setSectionVisible(panel.action_section, false);
         setSectionVisible(panel.description_section, true);
         setRowValue(panel.terrain_row, null);
         setRowValue(panel.overlay_row, null);
@@ -742,6 +792,8 @@ public class StartApp extends Application {
         setRowValue(panel.movement_row, null);
         setRowValue(panel.price_row, null);
         setRowValue(panel.armaments_row, null);
+        setRowValue(panel.action_row, null);
+        setRowValue(panel.attack_preview_row, null);
 
         panel.factory_shop_grid_P1.setVisible(false);
         panel.factory_shop_grid_P1.setManaged(false);
@@ -849,6 +901,9 @@ public class StartApp extends Application {
             setRowValue(panel.movement_row, null);
             setRowValue(panel.price_row, null);
             setRowValue(panel.armaments_row, null);
+            setSectionVisible(panel.action_section, false);
+            setRowValue(panel.action_row, null);
+            setRowValue(panel.attack_preview_row, null);
             panel.hp_box.setManaged(false);
             panel.hp_box.setVisible(false);
 
@@ -882,6 +937,12 @@ public class StartApp extends Application {
                 panel.hp_box.isManaged()
                         || anyVisible(panel.owner_row, panel.status_row, panel.movement_row, panel.price_row, panel.armaments_row)
         );
+
+        String action_text = buildActionText(game, position, unit);
+        String attack_preview = buildAttackPreviewText(game, position, unit);
+        setRowValue(panel.action_row, action_text);
+        setRowValue(panel.attack_preview_row, attack_preview);
+        setSectionVisible(panel.action_section, anyVisible(panel.action_row, panel.attack_preview_row));
 
         setSectionVisible(panel.description_section, true);
         setRowValue(panel.description_row, buildUnitDescription(unit, terrain, overlay, game, position));
@@ -949,6 +1010,99 @@ public class StartApp extends Application {
         }
 
         return "Ready";
+    }
+
+
+    /**
+     * @brief Build a short helper text for available unit actions
+     *
+     * @param game The current game
+     * @param position The selected unit position
+     * @param unit The selected unit
+     * @return Text describing the available actions
+     */
+    private static String buildActionText(Game game, Position position, Unit unit) {
+        if (unit == null) {
+            return "";
+        }
+
+        if (!unit.getOwner().equals(game.getCurrentPlayer())) {
+            return "Enemy unit. It can be attacked only during your active turn if one of your units has it in range.";
+        }
+
+        if (unit.hasAlreadyPlayed()) {
+            return "This unit has already finished its action this turn.";
+        }
+
+        int move_count = game.getReachableTiles(position).size();
+        int attack_count = game.getAttackableTiles(position).size();
+
+        StringBuilder text = new StringBuilder();
+        text.append("Move: ").append(move_count).append(" reachable tiles.");
+        text.append("\nAttack: ").append(attack_count).append(" available targets.");
+        text.append("\nWait: click the selected unit again to end its action.");
+
+        if (unit.hasMovedThisTurn()) {
+            text.append("\nThis unit has already moved, so only remaining legal attacks are shown.");
+        }
+
+        return text.toString();
+    }
+
+    /**
+     * @brief Build attack preview for all targets visible to the selected unit
+     *
+     * @param game The current game
+     * @param position The selected unit position
+     * @param unit The selected unit
+     * @return Attack preview text
+     */
+    private static String buildAttackPreviewText(Game game, Position position, Unit unit) {
+        if (unit == null || !unit.getOwner().equals(game.getCurrentPlayer()) || unit.hasAlreadyPlayed()) {
+            return "";
+        }
+
+        List<Position> attackable_tiles = game.getAttackableTiles(position);
+        if (attackable_tiles.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder text = new StringBuilder();
+        boolean first = true;
+
+        for (Position target_position : attackable_tiles) {
+            Unit target = game.getUnit(target_position);
+            if (target == null) {
+                continue;
+            }
+
+            int damage = game.previewAttackDamage(position, target_position);
+            int counter_damage = game.previewCounterAttackDamage(position, target_position);
+            int target_after = Math.max(0, target.getCurrentHp() - damage);
+            int attacker_after = Math.max(0, unit.getCurrentHp() - counter_damage);
+            int distance = game.getTileDistanceForDisplay(position, target_position);
+
+            if (!first) {
+                text.append("\n\n");
+            }
+
+            text.append(target.getUnitType().getName());
+            text.append(" at [").append(target_position.row()).append(",").append(target_position.column()).append("]");
+            text.append("\nRange: ").append(distance);
+            text.append(" | Damage: ").append(damage);
+            text.append(" | Target HP: ").append(target.getCurrentHp()).append(" -> ").append(target_after);
+
+            if (counter_damage > 0) {
+                text.append("\nCounter: ").append(counter_damage);
+                text.append(" | Own HP: ").append(unit.getCurrentHp()).append(" -> ").append(attacker_after);
+            } else {
+                text.append("\nCounter: none");
+            }
+
+            first = false;
+        }
+
+        return text.toString();
     }
 
     /**
@@ -1171,6 +1325,16 @@ public class StartApp extends Application {
      */
     private static void updateTurnLabel(Label turnLabel, Game game, String chosen_player) {
         String chosen_player_name = "P1".equals(chosen_player) ? "Soviets (P1)" : "Germans (P2)";
+
+        String winner = game.getWinner();
+        if (winner != null) {
+            String winner_name = "P1".equals(winner) ? "Soviets (P1)" : "Germans (P2)";
+            turnLabel.setText(
+                    "Scenario player: " + chosen_player_name
+                            + " | Game over | Winner: " + winner_name
+            );
+            return;
+        }
 
         turnLabel.setText(
                 "Scenario player: " + chosen_player_name

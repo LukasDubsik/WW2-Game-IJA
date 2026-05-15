@@ -145,6 +145,11 @@ public final class GameCanvas extends Canvas {
             return;
         }
 
+        // Lock gameplay interaction after victory
+        if (game.isFinished()) {
+            return;
+        }
+
         // Find the hexagon that has been clicked
         Position clicked = findHexAt(x, y);
 

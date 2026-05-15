@@ -1563,6 +1563,84 @@ public class Game {
         return reduced_damage;
     }
 
+
+    /**
+     * @brief Public read-only check if the game has already ended
+     *
+     * @return True if one side has won
+     */
+    public boolean isFinished() {
+        return isGameFinished();
+    }
+
+    /**
+     * @brief Preview the damage that an attack would deal without modifying the game
+     *
+     * @param attacker_position Position of the attacking unit
+     * @param target_position Position of the target unit
+     * @return Predicted damage, or 0 if the attack is not currently legal
+     */
+    public int previewAttackDamage(Position attacker_position, Position target_position) {
+        if (attacker_position == null || target_position == null) {
+            return 0;
+        }
+
+        List<Position> attackable_tiles = getAttackableTiles(attacker_position);
+        if (!attackable_tiles.contains(target_position)) {
+            return 0;
+        }
+
+        return computeAttackDamage(units_map.get(attacker_position), attacker_position, target_position);
+    }
+
+    /**
+     * @brief Preview the counterattack damage without modifying the game
+     *
+     * @param attacker_position Position of the original attacker
+     * @param target_position Position of the original target
+     * @return Predicted counterattack damage, or 0 if no counterattack will happen
+     */
+    public int previewCounterAttackDamage(Position attacker_position, Position target_position) {
+        if (attacker_position == null || target_position == null) {
+            return 0;
+        }
+
+        Unit attacker = units_map.get(attacker_position);
+        Unit defender = units_map.get(target_position);
+
+        if (attacker == null || defender == null) {
+            return 0;
+        }
+
+        int attack_damage = previewAttackDamage(attacker_position, target_position);
+        if (attack_damage <= 0) {
+            return 0;
+        }
+
+        // Dead units do not counterattack
+        if (defender.getCurrentHp() - attack_damage <= 0) {
+            return 0;
+        }
+
+        // Counterattack obeys range only
+        if (!isTileAttackableByRange(target_position, attacker_position)) {
+            return 0;
+        }
+
+        return computeAttackDamage(defender, target_position, attacker_position);
+    }
+
+    /**
+     * @brief Return graph distance between two tiles for display purposes
+     *
+     * @param from Source tile
+     * @param to Target tile
+     * @return Distance, or Integer.MAX_VALUE if not reachable
+     */
+    public int getTileDistanceForDisplay(Position from, Position to) {
+        return getTileDistance(from, to);
+    }
+
     /**
      * @brief Check whether the attacker at one tile can attack the target tile by range only
      * 

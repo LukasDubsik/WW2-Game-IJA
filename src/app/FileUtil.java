@@ -17,21 +17,16 @@ public class FileUtil {
      * @param title The title of the file chooser
      */
     public static void chooseFile(String title) {
+        // If we are already on JavaFX thread, open the dialog directly.
+        // Otherwise Platform.runLater + waiting on the same thread can deadlock.
+        if (Platform.isFxApplicationThread()) {
+            file = showOpenDialog(title);
+            return;
+        }
+
         CompletableFuture<File> future = new CompletableFuture<>();
 
-        Platform.runLater(() -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle(title);
-
-            File currentDir = new File(System.getProperty("user.dir"));
-            if (currentDir.exists() && currentDir.isDirectory()) {
-                fileChooser.setInitialDirectory(currentDir);
-            }
-
-            File selectedFile = fileChooser.showOpenDialog(null);
-
-            future.complete(selectedFile);
-        });
+        Platform.runLater(() -> future.complete(showOpenDialog(title)));
 
         try {
             file = future.get();
@@ -50,27 +45,15 @@ public class FileUtil {
      * @param title The title of the file chooser
      */
     public static void createReplayFile(String title) {
+        // If we are already on JavaFX thread, open the dialog directly.
+        if (Platform.isFxApplicationThread()) {
+            file = showReplaySaveDialog(title);
+            return;
+        }
+
         CompletableFuture<File> future = new CompletableFuture<>();
 
-        Platform.runLater(() -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle(title);
-
-            File currentDir = new File(System.getProperty("user.dir"));
-            if (currentDir.exists() && currentDir.isDirectory()) {
-                fileChooser.setInitialDirectory(currentDir);
-            }
-
-            FileChooser.ExtensionFilter extFilter =
-                    new FileChooser.ExtensionFilter("Replay Files (*.replay)", "*.replay");
-            fileChooser.getExtensionFilters().add(extFilter);
-
-            fileChooser.setInitialFileName("IJAGame.replay");
-
-            File selectedFile = fileChooser.showSaveDialog(null);
-
-            future.complete(selectedFile);
-        });
+        Platform.runLater(() -> future.complete(showReplaySaveDialog(title)));
 
         try {
             file = future.get();
@@ -81,6 +64,48 @@ public class FileUtil {
             e.printStackTrace();
             file = null;
         }
+    }
+
+    /**
+     * @brief Create and show a generic open dialog
+     *
+     * @param title Dialog title
+     * @return Selected file or null
+     */
+    private static File showOpenDialog(String title) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle(title);
+
+        File currentDir = new File(System.getProperty("user.dir"));
+        if (currentDir.exists() && currentDir.isDirectory()) {
+            fileChooser.setInitialDirectory(currentDir);
+        }
+
+        return fileChooser.showOpenDialog(null);
+    }
+
+    /**
+     * @brief Create and show replay save dialog
+     *
+     * @param title Dialog title
+     * @return Selected file or null
+     */
+    private static File showReplaySaveDialog(String title) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle(title);
+
+        File currentDir = new File(System.getProperty("user.dir"));
+        if (currentDir.exists() && currentDir.isDirectory()) {
+            fileChooser.setInitialDirectory(currentDir);
+        }
+
+        FileChooser.ExtensionFilter extFilter =
+                new FileChooser.ExtensionFilter("Replay Files (*.replay)", "*.replay");
+        fileChooser.getExtensionFilters().add(extFilter);
+
+        fileChooser.setInitialFileName("IJAGame.replay");
+
+        return fileChooser.showSaveDialog(null);
     }
 
     /**
