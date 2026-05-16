@@ -17,6 +17,7 @@ import model.game.Game;
 import model.map.Building;
 import model.map.Serializable.Position;
 import model.map.Serializable.Terrain;
+import model.unit.MovementType;
 import model.unit.Unit;
 import model.unit.UnitType;
 
@@ -46,7 +47,7 @@ public class Bot {
                 }
 
                 try {
-                    Thread.sleep(200);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -57,7 +58,6 @@ public class Bot {
                 });
             }
         });
-
     }
 
     /**
@@ -74,9 +74,25 @@ public class Bot {
         int income = getIncome(ownedBuildings);
         Map<Position, Building> factories = getFactories(ownedBuildings);
 
-        pushUnitsFromFactory(game, gameCopy, ownedUnits, factories);
-        buyUnits(game, gameCopy, player, playerWealth, income, factories);
         playUnits(game, gameCopy, player, ownedUnits);
+        pushUnitsFromFactory(game, gameCopy, ownedUnits, factories);
+        buyUnits(game, gameCopy, player, playerWealth, income, factories, getInfantryCount(ownedUnits));
+    }
+
+    /**
+     * @brief This functions calculates the number of infantry units from a list of units
+     *
+     * @param ownedUnits List of owned units
+     *
+     * @return Count of infantry for a specific player
+     */
+    private static int getInfantryCount(Map<Position, Unit> ownedUnits){
+        int result = 0;
+        for(Unit unit : ownedUnits.values()){
+            if(unit.getUnitType().getMovementType() == MovementType.INFANTRY)
+                result++;
+        }
+        return result;
     }
 
     /**
@@ -97,13 +113,22 @@ public class Bot {
 
             List<Position> reachableTiles = gameCopy.getReachableTiles(position);
             
-            Position move = getPriorityMove(gameCopy, player, unit, reachableTiles);
-            if(move == null)
-                continue;
+            Position move = getPriorityMove(gameCopy, player, unit, position, reachableTiles);
+            if(move != null)
+                moveUnit(game, unit, move);;
 
-            moveUnit(game, unit, move);
+            Position newPos = move == null ? position : move;
+            captureBuilding(game, newPos);
             attackUnits(game, gameCopy, unit);
         }
+    }
+
+    private static void captureBuilding(Game game, Position unitPosition){
+        Platform.runLater(() -> {
+            if(game.canCaptureBuilding(unitPosition)){
+                game.captureBuilding(unitPosition);
+            }
+        });
     }
 
     /**
@@ -114,6 +139,8 @@ public class Bot {
      * @param unit The unit performing the attack
      */
     private static void attackUnits(Game game, Game gameCopy, Unit unit){
+        if(unit.hasMovedThisTurn())
+            return;
         List<Position> attackableTiles = gameCopy.getAttackableTiles(unit.getPosition());
         if(attackableTiles.size() != 0){
             Platform.runLater(() -> {
@@ -132,40 +159,72 @@ public class Bot {
      *
      * @return The priority target Position, or null if no valid move is found
      */
-    private static Position getPriorityMove(Game gameCopy, String player, Unit unit, List<Position> reachableTiles){
+    private static Position getPriorityMove(Game gameCopy, String player, Unit unit, Position unitPos, List<Position> reachableTiles){
         Map<Position, Terrain> unownedBuildings = getUnownedBuildings(gameCopy);
         Map<Position, Unit> enemyUnits = getEnemyUnits(gameCopy, player);
         Map<Position, Building> enemyBuildings = getEnemyBuildings(gameCopy, player);
 
-        Position factoryPos = isBuildingInReach(reachableTiles, unownedBuildings, Terrain.FACTORY);
-        if(factoryPos != null)
-            return factoryPos;
+        if(gameCopy.isCaptureUnit(unit)){
 
-        Position cityPos = isBuildingInReach(reachableTiles, unownedBuildings, Terrain.CITY);
-        if(cityPos != null)
-            return cityPos;
+            if(enemyBuildings.get(unitPos) != null)
+                return null;
 
-        if(unownedBuildings.size() != 0){
-            Position closestUnownedBuilding = getTarget(unit.getPosition(), reachableTiles, unownedBuildings.keySet().stream().toList());
-            if(closestUnownedBuilding != null){
-                return closestUnownedBuilding;
+            Position factoryPos = isBuildingInReach(reachableTiles, unownedBuildings, Terrain.FACTORY);
+            if(factoryPos != null)
+                return factoryPos;
+
+            Position cityPos = isBuildingInReach(reachableTiles, unownedBuildings, Terrain.CITY);
+            if(cityPos != null)
+                return cityPos;
+
+            if(unownedBuildings.size() != 0){
+                Position closestUnownedBuilding = getTarget(unit.getPosition(), reachableTiles, unownedBuildings.keySet().stream().toList());
+                if(closestUnownedBuilding != null){
+                    return closestUnownedBuilding;
+                }
             }
-        }
 
-        if(enemyUnits.size() < 15){
             Position closestEnemyBuilding = getTarget(unit.getPosition(), reachableTiles, enemyBuildings.keySet().stream().toList());
             if(closestEnemyBuilding != null){
                 return closestEnemyBuilding;
             }
         }
+        else {
+            if(enemyUnits.size() != 0){
+                Position closestEnemyUnit = getTarget(unit.getPosition(), reachableTiles, enemyUnits.keySet().stream().toList());
+                if(closestEnemyUnit != null){
+                    if(enemyBuildings.get(closestEnemyUnit) != null)
+                        return randomNonBuildingPos(reachableTiles, enemyBuildings);
+                    return closestEnemyUnit;
+                }
+            }
 
-        if(enemyUnits.size() != 0){
-            Position closestEnemyUnit = getTarget(unit.getPosition(), reachableTiles, enemyUnits.keySet().stream().toList());
-            if(closestEnemyUnit != null)
-                return closestEnemyUnit;
+            if(enemyBuildings.get(unitPos) != null)
+                return randomNonBuildingPos(reachableTiles, enemyBuildings);
         }
 
         return null;
+    }
+
+    /**
+     * @brief Generates a random position that is not a building from a list of reachable tiles
+     *
+     * @param reachableTiles List of all reachable tiles for a unit
+     * @param enemyBuildings Map of enemy buildings and positions
+     *
+     * @return Random position
+     */
+    private static Position randomNonBuildingPos(List<Position> reachableTiles, Map<Position, Building> enemyBuildings){
+        if(reachableTiles.size() == 0)
+            return null;
+
+        int randomIndex = (int) (Math.random() * (reachableTiles.size()-1));
+        Position result = reachableTiles.get(randomIndex);
+        if(enemyBuildings.get(result) != null){
+            reachableTiles.remove(randomIndex);
+            return randomNonBuildingPos(reachableTiles, enemyBuildings);
+        }
+        return result;
     }
 
     /**
@@ -275,7 +334,7 @@ public class Bot {
      * @param income The projected income of the bot player
      * @param factories A map of owned factories
      */
-    private static void buyUnits(Game game, Game gameCopy, String player, int playerWealth, int income, Map<Position, Building> factories){
+    private static void buyUnits(Game game, Game gameCopy, String player, int playerWealth, int income, Map<Position, Building> factories, int infantryCount){
         List<UnitType> availableUnits = getAvailableUnits(player);
 
         for(Position position : factories.keySet()){
@@ -283,9 +342,30 @@ public class Bot {
                 continue;
 
             List<UnitType> affordableUnits = getAffordableUnits(playerWealth, availableUnits);
+            List<UnitType> affordableInfantry = getAfforadbleInfantry(affordableUnits);
 
-            buyRandomUnit(game, playerWealth, income, position, affordableUnits);
+            if(infantryCount < 3 && affordableInfantry.size() != 0)
+                buyRandomUnit(game, playerWealth, income, position, affordableInfantry);
+            else
+                buyRandomUnit(game, playerWealth, income, position, affordableUnits);
         }
+    }
+
+    /**
+     * @brief Returns the list of all affordable infantry units
+     *
+     * @param affordableUnits List of all affordable units
+     *
+     * @return List of all affordable infantry units
+     */
+    private static List<UnitType> getAfforadbleInfantry(List<UnitType> affordableUnits){
+        List<UnitType> result = new ArrayList<>();
+
+        for(UnitType unitType : affordableUnits){
+            if(unitType.getMovementType() == MovementType.INFANTRY)
+                result.add(unitType);
+        }
+        return result;
     }
 
     /**
@@ -321,13 +401,22 @@ public class Bot {
         if(randomUnit == null)
             return;
 
-        Platform.runLater(() -> {
-            game.setSelectedFactory(factoryPos);
-            game.buyUnit(randomUnit);
-        });
-
+        buyUnit(game, factoryPos, randomUnit);
     }
 
+    /**
+     * @brief Buy a unit
+     *
+     * @param game The main game instance
+     * @param factoryPos Position of a factory
+     * @param unitType Type of a unit to buy
+     */
+    private static void buyUnit(Game game, Position factoryPos, UnitType unitType){
+        Platform.runLater(() -> {
+            game.setSelectedFactory(factoryPos);
+            game.buyUnit(unitType);
+        });
+    }
     /**
      * @brief Picks a random unit from a list based on a provided weight distribution.
      *
