@@ -1487,6 +1487,8 @@ public class Game {
                     building.getIntegrity() - old_integrity,
                     previous_owner
             );
+            if(building.isHQ())
+                replay.addNextTurn(unit.getOwner(), 0);
         }
 
         notifyObservers(new GameEvent(GameEvent.Type.BUILDING_CAPTURED, unit, unit_position, unit_position));
