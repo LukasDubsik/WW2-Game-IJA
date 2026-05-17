@@ -24,7 +24,6 @@ import replay.records.UnitPurchaseRecord;
  */
 public class TurnRecord implements Serializable {
 
-    private final ArrayList<BuildingIntegrityRecord> birList = new ArrayList<>(); ///< List of all building integrity and owner changes
     private final ArrayList<RepairRecord> repairList = new ArrayList<>(); ///< List of all repaired units
     private final ArrayList<Action> actionList = new ArrayList<>(); ///< List of all actions the player has made this current turn
     private IncomeRecord incomeRecord; ///< Record of the income the current player got for that turn
@@ -38,7 +37,6 @@ public class TurnRecord implements Serializable {
      * @param turnRecord Turn record in the previous replay
      */
     public TurnRecord(TurnRecord turnRecord){
-        birList.addAll(turnRecord.birList);
         this.incomeRecord = turnRecord.incomeRecord;
         this.actionList.addAll(turnRecord.actionList);
         this.repairList.addAll(turnRecord.repairList);
@@ -62,16 +60,7 @@ public class TurnRecord implements Serializable {
      * @param prevOwner record of the owner in the current turn
      */
     public void addBir(Position buildingPos, int change, String prevOwner){
-        birList.add(new BuildingIntegrityRecord(buildingPos, change, prevOwner));
-    }
-
-    /**
-     * @brief Get the list of building changes in that turn
-     *
-     * @return List of all building changes
-     */
-    public ArrayList<BuildingIntegrityRecord> getBirList() {
-        return birList;
+        actionList.add(new Action(Action.ActionEnum.CAPTURE, new BuildingIntegrityRecord(buildingPos, change, prevOwner)));
     }
 
     /**
@@ -116,7 +105,6 @@ public class TurnRecord implements Serializable {
      *
      */
     public void clearRecords() {
-        birList.clear();
         actionList.clear();
         repairList.clear();
     }
@@ -147,16 +135,6 @@ public class TurnRecord implements Serializable {
      */
     public ArrayList<RepairRecord> getRepairList() {
         return repairList;
-    }
-
-    /**
-     * @brief Adds a new record of a purchased unit
-     *
-     * @param position Position of the factory
-     * @param cost Cost of the repair
-     */
-    public void addRepairedUnit(Position position, int cost){
-        repairList.add(new RepairRecord(position, cost));
     }
 
     /**

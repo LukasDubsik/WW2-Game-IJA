@@ -127,15 +127,15 @@ public class Game {
     private Game(Game game){
         gameMap = game.gameMap;
 
-        // Deep-copy units so the bot can simulate/read without mutating real objects
-        for (Map.Entry<Position, Unit> entry : game.units_map.entrySet()) {
-            units_map.put(entry.getKey(), new Unit(entry.getValue()));
-        }
+       // Deep-copy units so the bot can simulate/read without mutating real objects
+       for (Map.Entry<Position, Unit> entry : game.units_map.entrySet()) {
+           units_map.put(entry.getKey(), new Unit(entry.getValue()));
+       }
 
-        // Deep-copy buildings for the same reason
-        for (Map.Entry<Position, Building> entry : game.buildings.entrySet()) {
-            buildings.put(entry.getKey(), new Building(entry.getValue()));
-        }
+       // Deep-copy buildings for the same reason
+       for (Map.Entry<Position, Building> entry : game.buildings.entrySet()) {
+           buildings.put(entry.getKey(), new Building(entry.getValue()));
+       }
 
         playerWealth.putAll(game.playerWealth);
         observers.addAll(game.observers);
@@ -607,7 +607,6 @@ public class Game {
                 applyIncomeForward(turnRecord);
                 applyRepairsForward(turnRecord);
                 applyActionsForward(turnRecord);
-                applyBuildingChangesForward(turnRecord);
 
                 replay.advanceTurn();
             }
@@ -780,53 +779,42 @@ public class Game {
             else if (action.getActionEnum() == Action.ActionEnum.DESTROY) {
                 units_map.remove(action.getDestroyPosition());
             }
-        }
-    }
+            else if(action.getActionEnum() == Action.ActionEnum.CAPTURE){
+                BuildingIntegrityRecord bir = action.getBir();
+                Position position = bir.buildingPos();
+                Building building = getBuilding(position);
 
-    /**
-     * @brief Apply recorded building changes when moving forward in replay mode
-     *
-     * @param turnRecord Turn record to apply
-     */
-    private void applyBuildingChangesForward(TurnRecord turnRecord) {
-        if (turnRecord == null) {
-            return;
-        }
+                if (building == null) {
+                    Terrain terrain = getTerrain(position);
 
-        for (BuildingIntegrityRecord bir : turnRecord.getBirList()) {
-            Position position = bir.buildingPos();
-            Building building = getBuilding(position);
+                    if (!Terrain.isBuilding(terrain)) {
+                        System.err.println("Replay warning: building record on non-building tile " + position);
+                        continue;
+                    }
 
-            if (building == null) {
-                Terrain terrain = getTerrain(position);
-
-                if (!Terrain.isBuilding(terrain)) {
-                    System.err.println("Replay warning: building record on non-building tile " + position);
-                    continue;
+                    String owner = bir.prevOwner() == null ? "N" : bir.prevOwner();
+                    building = new Building(owner, terrain);
+                    buildings.put(position, building);
                 }
 
-                String owner = bir.prevOwner() == null ? "N" : bir.prevOwner();
-                building = new Building(owner, terrain);
-                buildings.put(position, building);
-            }
+                int new_integrity = building.getIntegrity() + bir.change();
 
-            int new_integrity = building.getIntegrity() + bir.change();
+                // If capture finished, infer the new owner from the infantry standing
+                // on the building. This matches how capture is represented in the log.
+                if (new_integrity >= building.getMaxIntegrity()) {
+                    Unit occupying_unit = getUnit(position);
 
-            // If capture finished, infer the new owner from the infantry standing
-            // on the building. This matches how capture is represented in the log.
-            if (new_integrity >= building.getMaxIntegrity()) {
-                Unit occupying_unit = getUnit(position);
+                    if (occupying_unit != null
+                            && isCaptureUnit(occupying_unit)
+                            && !occupying_unit.getOwner().equals(building.getOwner())) {
+                        building.setOwner(occupying_unit.getOwner());
+                    }
 
-                if (occupying_unit != null
-                        && isCaptureUnit(occupying_unit)
-                        && !occupying_unit.getOwner().equals(building.getOwner())) {
-                    building.setOwner(occupying_unit.getOwner());
+                    building.setIntegrity(building.getMaxIntegrity());
                 }
-
-                building.setIntegrity(building.getMaxIntegrity());
-            }
-            else {
-                building.setIntegrity(Math.max(0, new_integrity));
+                else {
+                    building.setIntegrity(Math.max(0, new_integrity));
+                }
             }
         }
     }
@@ -840,7 +828,7 @@ public class Game {
         if (!replayMode && replay != null) {
             TurnRecord currentTurnRecord = replay.getCurrentTurn();
             if (currentTurnRecord != null && (!currentTurnRecord.getActionList().isEmpty())) {
-                revertActions(currentTurnRecord, true);
+                revertActionsBackwards(currentTurnRecord);
                 currentTurnRecord.getActionList().clear();
             }
         }
@@ -868,14 +856,11 @@ public class Game {
         // Restore the previouse player wealth
         revertPlayerWealth(turnRecord);
 
-        // Revert the building changes
-        revertBuildingChanges(turnRecord);
+        // Revert all playerActions
+        revertActionsBackwards(turnRecord);
 
         // Revert repairs
         revertRepairs(turnRecord);
-
-        // Revert all playerActions
-        revertActions(turnRecord, true);
 
         // Notify the observers that the game changed
         notifyObservers(new GameEvent());
@@ -885,69 +870,49 @@ public class Game {
      * @brief Method to revert any action made by a player
      *
      * @param turnRecord recording of the previous turn
-     * @param revert should the method revert or go forward
      */
-    private void revertActions(TurnRecord turnRecord, boolean revert){
+    private void revertActionsBackwards(TurnRecord turnRecord){
         ArrayList<Action> actionList = turnRecord.getActionList();
 
-        if(revert){
-            for(int i = actionList.size() - 1; i >= 0; i--){ ///< Loop over all actions backwards
-                Action action = actionList.get(i);
-                if(action.getActionEnum() == Action.ActionEnum.DAMAGE){ ///< Revert damage
-                    DamageRecord damageRecord = action.getDamageRecord();
-                    Unit unit = getUnit(damageRecord.position());
-                    if(unit == null)
-                        throw new RuntimeException("Replay is corrupted at " + damageRecord.position().toString());
-                    unit.setCurrentHp(unit.getCurrentHp() + damageRecord.damage());
-                }
-                else if(action.getActionEnum() == Action.ActionEnum.MOVE){ ///< Revert move
-                    MoveRecord moveRecord = action.getMoveRecord();
-                    Unit unit = getUnit(moveRecord.pos2());
-                    if(unit == null)
-                        throw new RuntimeException("Replay is corrupted when moving from " + moveRecord.pos2() + " to " + moveRecord.pos1());
-                    moveUnit(moveRecord.pos2(), moveRecord.pos1(), true);
-                    unit.setMovedThisTurn(false);
-                    unit.setAlreadyPlayed(false);
-                }
-                else if(action.getActionEnum() == Action.ActionEnum.BUY){ ///< Revert buy action
-                    UnitPurchaseRecord unitPurchaseRecord = action.getUnitPurchaseRecord();
-                    units_map.remove(unitPurchaseRecord.position());
-                    int newWealth = playerWealth.get(this.current_player) + unitPurchaseRecord.unitType().getPrice();
-                    playerWealth.put(this.current_player, newWealth);
-                }
-                else if(action.getActionEnum() == Action.ActionEnum.DESTROY){ ///< Revert destruction of a unit
-                    Unit destroyedUnit = action.getUnitDestroyed();
-                    units_map.put(action.getDestroyPosition(), destroyedUnit);
-                }
+        for(int i = actionList.size() - 1; i >= 0; i--){ ///< Loop over all actions backwards
+            Action action = actionList.get(i);
+            if(action.getActionEnum() == Action.ActionEnum.DAMAGE){ ///< Revert damage
+                DamageRecord damageRecord = action.getDamageRecord();
+                Unit unit = getUnit(damageRecord.position());
+                if(unit == null)
+                    throw new RuntimeException("Replay is corrupted at " + damageRecord.position().toString());
+                unit.setCurrentHp(unit.getCurrentHp() + damageRecord.damage());
             }
-        }
-        else{
-            for(int i = 0; i < actionList.size(); i++){ ///< Loop over all actions forwards
-                Action action = actionList.get(i);
-                if(action.getActionEnum() == Action.ActionEnum.DAMAGE){ ///< Redo all damage actions
-                    DamageRecord damageRecord = action.getDamageRecord();
-                    Unit unit = getUnit(damageRecord.position());
-                    if(unit == null)
-                        throw new RuntimeException("Replay is corrupted at " + damageRecord.position());
-                    unit.takeDamage(damageRecord.damage());
-                    if(unit.isDestroyed())
-                        this.units_map.remove(unit.getPosition());
+            else if(action.getActionEnum() == Action.ActionEnum.MOVE){ ///< Revert move
+                MoveRecord moveRecord = action.getMoveRecord();
+                Unit unit = getUnit(moveRecord.pos2());
+                if(unit == null)
+                    throw new RuntimeException("Replay is corrupted when moving from " + moveRecord.pos2() + " to " + moveRecord.pos1());
+                moveUnit(moveRecord.pos2(), moveRecord.pos1(), true);
+                unit.setMovedThisTurn(false);
+                unit.setAlreadyPlayed(false);
+            }
+            else if(action.getActionEnum() == Action.ActionEnum.BUY){ ///< Revert buy action
+                UnitPurchaseRecord unitPurchaseRecord = action.getUnitPurchaseRecord();
+                units_map.remove(unitPurchaseRecord.position());
+                int newWealth = playerWealth.get(this.current_player) + unitPurchaseRecord.unitType().getPrice();
+                playerWealth.put(this.current_player, newWealth);
+            }
+            else if(action.getActionEnum() == Action.ActionEnum.DESTROY){ ///< Revert destruction of a unit
+                Unit destroyedUnit = action.getUnitDestroyed();
+                units_map.put(action.getDestroyPosition(), destroyedUnit);
+            }
+            else if(action.getActionEnum() == Action.ActionEnum.CAPTURE){ ///< Revert capture
+                BuildingIntegrityRecord bir = action.getBir();
+
+                if(bir.prevOwner() == null){
+                    buildings.remove(bir.buildingPos());
+                    continue;
                 }
-                else if(action.getActionEnum() == Action.ActionEnum.MOVE){ ///< Redo all move actions
-                    MoveRecord moveRecord = action.getMoveRecord();
-                    Unit unit = getUnit(moveRecord.pos1());
-                    if(unit == null)
-                        throw new RuntimeException("Replay is corrupted " + moveRecord.pos1().toString());
-                    unit.setMovedThisTurn(false);
-                    unit.setAlreadyPlayed(false);
-                    moveUnit(moveRecord.pos1(), moveRecord.pos2(), true);
-                }
-                else if(action.getActionEnum() == Action.ActionEnum.BUY){ ///< Redo all buy actions
-                    UnitPurchaseRecord unitPurchaseRecord = action.getUnitPurchaseRecord();
-                    selectedFactory = unitPurchaseRecord.position();
-                    if(!buyUnit(unitPurchaseRecord.unitType()))
-                        throw new RuntimeException("Replay is corrupted " + unitPurchaseRecord.unitType() + ", at " + unitPurchaseRecord.position() + ", by " + this.current_player);
-                }
+
+                Building building = getBuilding(bir.buildingPos());
+                building.setIntegrity(building.getIntegrity() - bir.change());
+                building.setOwner(bir.prevOwner());
             }
         }
     }
@@ -972,27 +937,18 @@ public class Game {
         }
     }
 
-    /**
-     * @brief Revert the building changes made that turn
-     *
-     * @param turnRecord Turn record to revert
-     */
-    private void revertBuildingChanges(TurnRecord turnRecord){
-        ArrayList<BuildingIntegrityRecord> birList = turnRecord.getBirList();
-
-        for(int i = birList.size() - 1; i >= 0; i--){
-            BuildingIntegrityRecord bir = birList.get(i);
-
-            if(bir.prevOwner() == null){
-                buildings.remove(bir.buildingPos());
-                continue;
-            }
-
-            Building building = getBuilding(bir.buildingPos());
-            building.setIntegrity(building.getIntegrity() - bir.change());
-            building.setOwner(bir.prevOwner());
-        }
-    }
+    ///**
+    // * @brief Revert the building changes made that turn
+    // *
+    // * @param turnRecord Turn record to revert
+    // */
+    //private void revertBuildingChanges(TurnRecord turnRecord){
+    //    ArrayList<BuildingIntegrityRecord> birList = turnRecord.getBirList();
+//
+    //    for(int i = birList.size() - 1; i >= 0; i--){
+//
+    //    }
+    //}
 
     /**
      * @brief Revert the player wealth
@@ -1356,7 +1312,7 @@ public class Game {
      * @param unit The unit to test
      * @return True if the unit may capture
      */
-    private boolean isCaptureUnit(Unit unit) {
+    public boolean isCaptureUnit(Unit unit) {
         return unit != null && unit.getUnitType().getMovementType() == MovementType.INFANTRY;
     }
 
@@ -1531,6 +1487,8 @@ public class Game {
                     building.getIntegrity() - old_integrity,
                     previous_owner
             );
+            if(building.isHQ())
+                replay.addNextTurn(unit.getOwner(), 0);
         }
 
         notifyObservers(new GameEvent(GameEvent.Type.BUILDING_CAPTURED, unit, unit_position, unit_position));

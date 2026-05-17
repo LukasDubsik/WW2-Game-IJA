@@ -9,6 +9,7 @@ import java.io.Serializable;
 
 import model.map.Serializable.Position;
 import model.unit.Unit;
+import replay.records.BuildingIntegrityRecord;
 import replay.records.DamageRecord;
 import replay.records.MoveRecord;
 import replay.records.UnitPurchaseRecord;
@@ -26,7 +27,8 @@ public class Action implements Serializable {
         MOVE, ///< Action move
         DAMAGE, ///< Action damage
         BUY, ///< Action buy
-        DESTROY /// Action destroy
+        DESTROY, ///< Action destroy
+        CAPTURE ///< Capture action
     }
 
     private final ActionEnum actionEnum; ///< Type of the action
@@ -35,6 +37,7 @@ public class Action implements Serializable {
     private final UnitPurchaseRecord unitPurchaseRecord; ///< Holder of the buy record
     private final Unit unitDestroyed; ///< Holder of the destroy unit
     private final Position destroyPosition; ///< Holder of the destroy position
+    private final BuildingIntegrityRecord bir;
 
     /**
      * @brief Create a move record action
@@ -48,7 +51,8 @@ public class Action implements Serializable {
         this.damageRecord = null;
         this.unitPurchaseRecord = null;
         this.unitDestroyed = null;
-        destroyPosition = null;
+        this.destroyPosition = null;
+        this.bir = null;
     }
 
     /**
@@ -63,7 +67,8 @@ public class Action implements Serializable {
         this.damageRecord = damageRecord;
         this.unitPurchaseRecord = null;
         this.unitDestroyed = null;
-        destroyPosition = null;
+        this.destroyPosition = null;
+        this.bir = null;
     }
 
     /**
@@ -78,7 +83,8 @@ public class Action implements Serializable {
         this.damageRecord = null;
         this.unitPurchaseRecord = unitPurchaseRecord;
         this.unitDestroyed = null;
-        destroyPosition = null;
+        this.destroyPosition = null;
+        this.bir = null;
     }
 
     /**
@@ -95,6 +101,23 @@ public class Action implements Serializable {
         this.unitPurchaseRecord = null;
         this.unitDestroyed = unitDestroyed;
         this.destroyPosition = destroyPosition;
+        this.bir = null;
+    }
+
+    /**
+     * @brief Create a building integrity action
+     *
+     * @param actionEnum Type of action
+     * @param bir Building integrity record
+     */
+    public Action(ActionEnum actionEnum, BuildingIntegrityRecord bir) {
+        this.actionEnum = actionEnum;
+        this.moveRecord = null;
+        this.damageRecord = null;
+        this.unitPurchaseRecord = null;
+        this.unitDestroyed = null;
+        this.destroyPosition = null;
+        this.bir = bir;
     }
 
     /**
@@ -149,5 +172,14 @@ public class Action implements Serializable {
      */
     public Position getDestroyPosition() {
         return destroyPosition;
+    }
+
+    /**
+     * @brief Get the record of the building integrity action
+     *
+     * @return Record of the building integrity change
+     */
+    public BuildingIntegrityRecord getBir() {
+        return bir;
     }
 }
