@@ -1,6 +1,6 @@
 /**
  * @file StartApp.java
- * @author Team
+ * @author xdubsil00, xbobekp00
  * @brief Source file StartApp.java for the IJA Advance-Wars-inspired game project.
  */
 package app;

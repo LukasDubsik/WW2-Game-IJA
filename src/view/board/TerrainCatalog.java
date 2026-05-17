@@ -1,6 +1,6 @@
 /**
  * @file TerrainCatalog.java
- * @author Team
+ * @author xdubsil00, xbobekp00
  * @brief Source file TerrainCatalog.java for the IJA Advance-Wars-inspired game project.
  */
 package view.board;

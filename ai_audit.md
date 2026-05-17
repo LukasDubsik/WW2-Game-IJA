@@ -1,4 +1,4 @@
-# AI Audit Log – tým xlogin00
+# AI Audit Log – tým xdubsil00
 
 **Datum poslední aktualizace:** 20. 4. 2026
 
@@ -16,7 +16,7 @@ AI byla používána především:
 - pro kostry některých podpůrných tříd a enumů,
 - pro pomoc s formulací některých textových a prezentačních částí,
 - pro část grafických assetů nebo podkladů, které byly následně ručně vybírány, upravovány a zasazovány do projektu.
-- generace Javadoc pro třídu `Bot.class`
+- generace Javadoc pro třídu `Bot.java`
 
 Naopak bez použití AI byly řešeny zejména:
 - celková koncepce hry a architektura projektu,

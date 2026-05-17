@@ -1,6 +1,6 @@
 /**
  * @file Unit.java
- * @author Team
+ * @author xdubsil00, xbobekp00
  * @brief Source file Unit.java for the IJA Advance-Wars-inspired game project.
  */
 package model.unit;

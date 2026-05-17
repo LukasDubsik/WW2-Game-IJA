@@ -1,0 +1,89 @@
+2026-05-15 Lukas Dubsik: feature(global) - 0.04: Final submission
+2026-05-15 Lukas Dubsik: feature(global) - 0.04: Massivve last addions of missing things
+2026-05-15 Lukas Dubsik: feature(global) - 0.04: Fixed remaining errors
+2026-05-15 Lukas Dubsik: feature(global) - 0.04: Added better capture logic with visualizaion
+2026-05-15 Lukas Dubsik: feature(global) - 0.04: Massive fix of all the missg parts till now
+2026-05-15 Lukas Dubsik: feature(game) - 0.04: Added start menu to select a player and scenario to play
+2026-05-15 pajsaMC: Lame victory screen
+2026-05-15 pajsaMC: My part of AI audit
+2026-05-15 pajsaMC: Added repair
+2026-05-14 pajsaMC: Replay fix, Added bot
+2026-05-13 pajsaMC: Added buying new units
+2026-05-13 pajsaMC: Added replay mode
+2026-05-11 pajsaMC: Remove scrollbars on both sides. Add Income and Capture logic.
+2026-05-10 Lukas Dubsik: feature(global) - 0.02: First version of ai audit
+2026-05-10 Lukas Dubsik: feature(global) - 0.02: First version of ai audit
+2026-05-10 Lukas Dubsik: feature(maps) - 0.02: Added mapping for units per map
+2026-05-10 Lukas Dubsik: feature(game) - 0.02: Updated maps for more historical accuracy
+2026-05-10 Lukas Dubsik: feature(game) - 0.02: Class to load unit placement for map scenarios
+2026-05-10 Lukas Dubsik: feature(game) - 0.02: New UI for tile and unit info
+2026-05-10 Lukas Dubsik: feature(game) - 0.02: Integration of the weapon types to the Game itself
+2026-05-10 Lukas Dubsik: feature(unit) - 0.02: Finoshed the base wiring of different weapon types
+2026-05-10 Lukas Dubsik: feature(unit) - 0.02: Wired weapons into unit types +
+2026-05-10 Lukas Dubsik: feature(unit) - 0.02: Wired weapons into unit types
+2026-05-10 Lukas Dubsik: feature(unit) - 0.02: Types of weapons for the units class added
+2026-05-10 Lukas Dubsik: feature(unit) - 0.02: The tag of attack
+2026-05-10 Lukas Dubsik: feature(unit) - 0.02: Added tags for unit weapons
+2026-05-10 Lukas Dubsik: feature(board) - 0.02: Added drawing of hp for the units so their health is seen
+2026-05-10 Lukas Dubsik: feature(board) - 0.02: Fixed some problems in the animations
+2026-05-10 Lukas Dubsik: feature(gamel) - 0.02: Implemented helper for the neighbor in the Game
+2026-05-10 Lukas Dubsik: feature(gamel) - 0.02: Added shared helper for getting neighbors for a tile
+2026-05-10 Lukas Dubsik: feature(global) - 0.02: Finishing combat parts
+2026-05-10 Lukas Dubsik: feature(board) - 0.02: UI combat implementation
+2026-05-10 Lukas Dubsik: feature(game) - 0.02: Defence bonus and counterattack
+2026-05-10 Lukas Dubsik: feature(game) - 0.02: Attack without counterattack
+2026-05-10 Lukas Dubsik: feature(game) - 0.02: The units can now detect enemies in range
+2026-05-10 Lukas Dubsik: feature(unit) - 0.02: Added ability to take damage and destroy units
+2026-04-19 Lukas Dubsik: feature(maps) - 0.02: Added larger versions of teh historical maps for units
+2026-04-19 Lukas Dubsik: feature(maps) - 0.02: Added possible initial forms of historicaal maps
+2026-04-19 Lukas Dubsik: feature(assets) - 0.02: Added possible initial forms of historicaal maps
+2026-04-19 Lukas Dubsik: feature(global) - 0.02: Added to the Readme request to look into the AI generated assets
+2026-04-19 Lukas Dubsik: refactor(globl) - 0.02: Removed some files that were no longer necessary
+2026-04-19 Lukas Dubsik: feature(globl) - 0.02: Added Readme describing the state of the project and what should be yet done
+2026-04-19 Lukas Dubsik: feature(unit) - 0.01: Added multiple new unit types
+2026-04-19 Lukas Dubsik: feature(assets) - 0.01: Added AI generated soviet unit assets
+2026-04-19 Lukas Dubsik: feature(assets) - 0.01: Added AI generated german unit assets
+2026-04-19 Lukas Dubsik: Fixed some problems with the game not taking into account terrain/overlay costs
+2026-04-19 Lukas Dubsik: feature(view) - 0.01: Overlays onto the tiles are now visualized as active modifiers of it
+2026-04-19 Lukas Dubsik: feature(view) - 0.01: Added a bottom slider to change turns of the game
+2026-04-19 Lukas Dubsik: feature(view) - 0.01: Correct handling for turn based game
+2026-04-19 Lukas Dubsik: feature(game) - 0.01: Added turns into Game so only specific players can move units of their own
+2026-04-19 Lukas Dubsik: feature(assets) - 0.01: Added terrain assets to the game
+2026-04-18 Lukas Dubsik: feature(board) - 0.01: Added loading of images for tiles for a game
+2026-04-18 Lukas Dubsik: feature(board) - 0.01: Added class to convert terrain to either color or the asset
+2026-04-18 Lukas Dubsik: feature(board) - 0.01: Added class that can hold color and path to the asset of the tyle
+2026-04-18 Lukas Dubsik: fix(canvas) - 0.01: Factory didn't have itsown color
+2026-04-18 Lukas Dubsik: fix(canvas) - 0.01: Error when clicking as null exception could have occured
+2026-04-18 Lukas Dubsik: feature(board) - 0.01: Added debugger for overlay drawing
+2026-04-18 Lukas Dubsik: feature(game) - 0.01: Added helpers to compute costs of combined terrain + overlay
+2026-04-18 Lukas Dubsik: feature(view) - 0.01: Game Factory now constructs maps with overlays in place
+2026-04-18 Lukas Dubsik: feature(view) - 0.01: Finished the map element class.
+2026-04-18 Lukas Dubsik: feature(view) - 0.01: Added Overlay converter
+2026-04-18 Lukas Dubsik: feature(view) - 0.01: Added class to hold the individual values from stored maps
+2026-04-18 Lukas Dubsik: refactor(map) - 0.01: Made new names for overlays for map style
+2026-04-18 Lukas Dubsik: feature(view) - 0.01: Added the full map -> Now holds the terrain, name and list of the overlays.
+2026-04-15 Lukas Dubsik: feature(view) - 0.01: Added the Full overlay value -> The position for the overlay class
+2026-04-15 Lukas Dubsik: feature(view) - 0.01: Added the overlays over the base terrains
+2026-04-15 Lukas Dubsik: feature(view) - 0.01: Added base extension for expanding tile types
+2026-04-12 Lukas Dubsik: fix(view) - 0.01: The unit movement now correctly respons to hex grid.
+2026-04-12 Lukas Dubsik: fix(view) - 0.01: Extended the interactive properties from canvas to the pane, so the whole space can be interacted with.
+2026-04-12 Lukas Dubsik: feature(view) - 0.01: Added that when unit is clicked its range of motion is showed
+2026-04-11 Lukas Dubsik: feature(view) - 0.01: Added ABILITY THAT WHEN A TILE IS CLICKED IT SHOWS IT IN A BLUE COLOR
+2026-04-11 Lukas Dubsik: comment(view) - 0.01: Finished some left out comments for the GameCanvas class
+2026-04-11 Lukas Dubsik: comment(view) - 0.01: Finished some left out comments for the StartApp class
+2026-04-11 Lukas Dubsik: feature(view) - 0.01: Added some more interactive options to the map.
+2026-04-07 Lukas Dubsik: feature(view) - 0.01: Added that zooming does move towards the whole, resized window
+2026-04-07 Lukas Dubsik: feature(view) - 0.01: Added the correct determination of width aand height of the canvas and click mouse correlation
+2026-04-07 Lukas Dubsik: feature(view) - 0.01: Get color for the terrain type
+2026-04-07 Lukas Dubsik: feature(view) - 0.01: Get the points of the hexagon for the caanvas
+2026-04-07 Lukas Dubsik: feature(view) - 0.01: Get the position of the hexagon in the canvas
+2026-04-07 Lukas Dubsik: feature(game) - 0.01: Some functions to get info from the Game class
+2026-04-07 Lukas Dubsik: feature(global) - 0.01: The initial version ofthe drawing of the canvas
+2026-04-07 Lukas Dubsik: feature(global) - 0.01: The initial version of the canvas
+2026-04-07 Lukas Dubsik: feature(global) - 0.01: Initial version of game call and render
+2026-04-07 Lukas Dubsik: feature(global) - 0.01: Added Maven support for compilation
+2026-04-07 Lukas Dubsik: feature(global) - 0.01: Added base classes for rendering the map.
+2026-04-07 Lukas Dubsik: refactor(global) - 1.01: Additional restructuring for the MVC model.
+2026-04-07 Lukas Dubsik: refactor(global): Restructuring on code location per project instructions
+2026-04-07 Lukas Dubsik: Initial commit from previous work (homework 2 for IJA)
+2026-04-07 Kuke: Initial commit

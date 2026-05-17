@@ -1,6 +1,6 @@
 /**
  * @file BuildingOwnershipLoader.java
- * @author Team
+ * @author xdubsil00, xbobekp00
  * @brief Source file BuildingOwnershipLoader.java for the IJA Advance-Wars-inspired game project.
  */
 package model.game;

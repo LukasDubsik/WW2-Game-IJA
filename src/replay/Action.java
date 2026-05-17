@@ -1,6 +1,6 @@
 /**
  * @file Action.java
- * @author Team
+ * @author xdubsil00, xbobekp00
  * @brief Source file Action.java for the IJA Advance-Wars-inspired game project.
  */
 package replay;
