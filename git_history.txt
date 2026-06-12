@@ -1,3 +1,8 @@
+2026-05-17 Lukas Dubsik: XMerge branch 'main' of https://github.com/LukasDubsik/WW2-Game-IJA
+2026-05-17 Lukas Dubsik: Final commit
+2026-05-17 pajsaMC: fix replay game victory
+2026-05-16 pajsaMC: Compressed pngs
+2026-05-16 pajsaMC: Replay and Bot bugfixes
 2026-05-15 Lukas Dubsik: feature(global) - 0.04: Final submission
 2026-05-15 Lukas Dubsik: feature(global) - 0.04: Massivve last addions of missing things
 2026-05-15 Lukas Dubsik: feature(global) - 0.04: Fixed remaining errors
